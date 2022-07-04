@@ -8,6 +8,7 @@ English | [简体中文](README_CN.md)
 
 **A High-Efficient Development Toolkit for Image Segmentation based on [PaddlePaddle](https://github.com/paddlepaddle/paddle).**
 
+[![Build Status](https://travis-ci.org/PaddlePaddle/PaddleSeg.svg?branch=release/2.1)](https://travis-ci.org/PaddlePaddle/PaddleSeg)
 [![License](https://img.shields.io/badge/license-Apache%202-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/github/release/PaddlePaddle/PaddleSeg.svg)](https://github.com/PaddlePaddle/PaddleSeg/releases)
 ![python version](https://img.shields.io/badge/python-3.6+-orange.svg)
@@ -18,10 +19,20 @@ English | [简体中文](README_CN.md)
 
 
 ## News <img src="./docs/images/seg_news_icon.png" width="40"/>
+<ul class="nobull">
+  <li>[2022-04-20] :fire: PaddleSeg v2.5 is released! More details in <a href="https://github.com/PaddlePaddle/PaddleSeg/releases">Release Notes</a>.</li>
+    <ul>
+        <li>Release <a href="./configs/pp_liteseg">PP-LiteSeg</a>, a real-time semantic segmentation model. It achieves SOTA trade-off between segmentation accuracy and inference speed. [<a href="https://arxiv.org/pdf/2204.02681.pdf">techical report</a>]</li>
+        <li>Release <a href="./Matting">PP-Matting</a>, a trimap-free image matting model for extremely fine-grained segmentation. It achieves SOTA performance on Composition-1k and Distinctions-646. [<a href="https://arxiv.org/abs/2204.09433">techical report</a>]</li>
+        <li>Release <a href="./contrib/MedicalSeg">MedicalSeg</a>, a newly easy-to-use toolkit for 3D medical image segmentation. It supports the whole process including data preprocessing, model training, and model deployment, and provides the high-accuracy models on lung and spine segmentation.
+        <li>Upgrade the interactive annotation tool <a href="./EISeg">EISeg v0.5</a> with supporting new areas in chest X-Ray, MRI spine, and defect inspection.</li>
+        <li>Add 5 semantic segmentatioin models, including variants of PP-LiteSeg.</li>
+    </ul>
+ <li>[2022-01-20] We release PaddleSeg v2.4 with EISeg v0.4, and <a href="./contrib/PP-HumanSeg">PP-HumanSeg</a> including open-sourced dataset <a href="./contrib/PP-HumanSeg/paper.md#pp-humanseg14k-a-large-scale-teleconferencing-video-dataset">PP-HumanSeg14K</a>. </li>
+ <li>[2021-10-11] We released PaddleSeg v2.3 with the improved interactive segmentation tool EISeg v0.3, two matting algorithms, and segmentation model compression.</li>
 
-* [2022-01-04] We published a paper on portrait segmentation named [PP-HumanSeg](./contrib/PP-HumanSeg/paper.md), and released Semantic Connectivity-aware Learning (SCL) framework and a Large-Scale Teleconferencing Video Dataset.
-* [2021-10-11] We released PaddleSeg v2.3 with the improved interactive segmentation tool ([EISeg v0.3](./EISeg)), two [matting]((./contrib/Matting)) algorithms, and segmentation model compression.
-* For more information please refer to [Release Note](https://github.com/PaddlePaddle/PaddleSeg/releases).
+</ul>
+
 
 ## Introduction
 
@@ -54,6 +65,11 @@ PaddleSeg is an end-to-end high-efficent development toolkit for image segmentat
 
 * <img src="./docs/images/f3.png" width="20"/> **High Efficiency**: PaddleSeg provides multi-process asynchronous I/O, multi-card parallel training, evaluation, and other acceleration strategies, combined with the memory optimization function of the PaddlePaddle, which can greatly reduce the training overhead of the segmentation model, all this allowing developers to lower cost and more efficiently train image segmentation model.
 
+<div align="center">
+<img src="https://user-images.githubusercontent.com/14087480/176402154-390e5815-1a87-41be-9374-9139c632eb66.png" width = "2000" />  
+</div>
+
+---
 
 
 ## Overview <img src="./docs/images/model.png" width="20"/>
@@ -113,6 +129,11 @@ PaddleSeg is an end-to-end high-efficent development toolkit for image segmentat
             <li>MLA Transformer</li>
             <li>SegFormer</li>
             <li>SegMenter</li>
+            <li>ENet</li>
+            <li>CCNet</li>
+            <li>DDRNet</li>
+            <li>GloRe</li>
+            <li>PP-LiteSeg :star:</li>
       </td>
       <td>
         <b>Backbones</b><br>
@@ -145,6 +166,7 @@ PaddleSeg is an end-to-end high-efficent development toolkit for image segmentat
             <li>Edge Attention</li>
             <li>Relax Boundary</li>
             <li>Connectivity</li>
+            <li>MultiClassFocal</li>
           </ul>
         <b>Metrics</b><br>
           <ul>
@@ -203,6 +225,7 @@ PaddleSeg is an end-to-end high-efficent development toolkit for image segmentat
            </ul>
        <b>Image Matting</b><br>
         <ul>
+            <li>PP-Matting</li>
             <li>DIM</li>
             <li>MODNet</li>
             <li>PP-HumanMatting</li>
@@ -210,6 +233,10 @@ PaddleSeg is an end-to-end high-efficent development toolkit for image segmentat
         <b>Human Segmentation</b><br>
         <ul>
             <li>PP-HumanSeg</li>
+        </ul>
+        <b>3D Medical Segmentation</b><br>
+        <ul>
+          <li>VNet</li>
         </ul>
         <b>Cityscapes SOTA</b><br>
         <ul>
@@ -236,6 +263,7 @@ PaddleSeg is an end-to-end high-efficent development toolkit for image segmentat
   </tbody>
 </table>
 
+---
 ## Model Zoo
 
 The relationship between mIoU and FLOPs of representative architectures and backbones. See [Model Zoo Overview](./docs/model_zoo_overview.md) for more details.
@@ -296,8 +324,9 @@ The relationship between mIoU and FLOPs of representative architectures and back
 
 ## Practical Projects
   * [Interactive Segmentation](./EISeg)
-  * [Image Matting](./contrib/Matting)
+  * [Image Matting](./Matting)
   * [PP-HumanSeg](./contrib/PP-HumanSeg)
+  * [3D Medical Segmentation](./contrib/MedicalSeg)
   * [Cityscapes SOTA](./contrib/CityscapesSOTA)
   * [Panoptic Segmentation](./contrib/PanopticDeepLab)
   * [CVPR Champion Solution](./contrib/AutoNUE)
@@ -307,9 +336,9 @@ The relationship between mIoU and FLOPs of representative architectures and back
 ## Community <img src="./docs/images/chat.png" width="30"/>
 
 * If you have any problem or suggestion on PaddleSeg, please send us issues through [GitHub Issues](https://github.com/PaddlePaddle/PaddleSeg/issues).
-* Welcome to Join PaddleSeg QQ Group
+* Welcome to Join PaddleSeg WeChat Group
 <div align="center">
-<img src="./docs/images/QQ_chat.png"  width = "200" />  
+<img src="https://user-images.githubusercontent.com/48433081/163670184-43cfb3ae-2047-4ba3-8dae-6c02090dd177.png"  width = "200" />  
 </div>
 
 ## License
@@ -323,11 +352,11 @@ PaddleSeg is released under the [Apache 2.0 license](LICENSE).
 * Thanks [yazheng0307](https://github.com/yazheng0307) (LIU Zheng) for contributing quick-start document.
 * Thanks [CuberrChen](https://github.com/CuberrChen) for contributing STDC(rethink BiSeNet), PointRend and DetailAggregateLoss.
 * Thanks [stuartchen1949](https://github.com/stuartchen1949) for contributing SegNet.
-* Thanks [justld](https://github.com/justld) (Lang Du) for contributing ESPNetV2, DMNet, ENCNet, HRNet_W48_Contrast, FastFCN, BiSeNetV1, SECrossEntropyLoss and PixelContrastCrossEntropyLoss.
+* Thanks [justld](https://github.com/justld) (Lang Du) for contributing UPerNet, DDRNet, CCNet, ESPNetV2, DMNet, ENCNet, HRNet_W48_Contrast, FastFCN, BiSeNetV1, SECrossEntropyLoss and PixelContrastCrossEntropyLoss.
 * Thanks [Herman-Hu-saber](https://github.com/Herman-Hu-saber) (Hu Huiming) for contributing ESPNetV2.
 * Thanks [zhangjin12138](https://github.com/zhangjin12138) for contributing RandomCenterCrop.
 * Thanks [simuler](https://github.com/simuler) for contributing ESPNetV1.
-* Thanks [ETTR123](https://github.com/ETTR123)(Zhang Kai) for contributing PFPNNet.
+* Thanks [ETTR123](https://github.com/ETTR123)(Zhang Kai) for contributing ENet, PFPNNet.
 
 ## Citation
 If you find our project useful in your research, please consider citing:

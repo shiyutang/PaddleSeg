@@ -2,16 +2,22 @@ English | [简体中文](README_cn.md)
 
 # PP-HumanSeg
 
-Human segmentation is a very common application in the field of image segmentation. PaddleSeg has launched a human segmentation solution named PP-HumanSeg, which models are trained on large-scale human data to meet the needs of various usage scenarios on the server, mobile and web. This tutorial provides a full-process application guide from training to deployment, as well as the actual effect experience of video streaming human segmentation and background replacement. We release an ultra-lightweight segmentation model **PP-HumanSeg-Lite**, which supports real-time segmentation of web and mobile scenes.
+Human segmentation is a high-frequency application in the field of image segmentation. PaddleSeg has launched a series of human segmentation models PP-HumanSeg trained on large-scale human data, including self-developed ultra lightweight model PP-HumanSeg-Lite, lightweight model PP-HumanSeg-Mobile and high-precision model PP-HumanSeg-Server, which meet the needs of multiple use scenarios on the web, mobile and server. Among them, PP-HumanSeg-Lite adopts lightweight network design, connectivity learning strategy, data composition and other strategies to realize the SOTA balance of volume, speed and accuracy (parameter amount 137k, speed up to 95fps, mIoU up to 93%).
 
-The COVID-19 epidemic has catalyzed the demand for remote office, and video conferencing products have exploded rapidly. Baidu Video Conference can realize one-second joining on the web side. The virtual background function adopts our PP-HumanSeg-Lite model to realize real-time background replacement and background blur function, protect user privacy, and increase the fun in the meeting.
+We provide full-process application guides from training to deployment, as well as video streaming segmentation and background replacement tutorials. Based on Paddle.js, you can experience the effects of [Portrait Snapshot](https://paddlejs.baidu.com/humanseg), [Video Background Replacement and Barrage Penetration](https://www.paddlepaddle.org.cn/paddlejs).
 
 <p align="center">
-<img src="https://github.com/LutaoChu/transfer_station/raw/master/conference.gif" width="70%" height="70%">
+<img src="https://user-images.githubusercontent.com/30695251/149886667-f47cab88-e81a-4fd7-9f32-fbb34a5ed7ce.png"  height="300">        <img src="https://user-images.githubusercontent.com/30695251/149887482-d1fcd5d3-2cce-41b5-819b-bfc7126b7db4.png"  height="300">
 </p>
 
+
 ## Updates
-- [2022-1-4] Human segmentation paper [PP-HumanSeg](./paper.md) was published in WACV 2022 Workshop, and open-sourced Connectivity Learning (SCL) method and large-scale video conferencing dataset.
+- [2022-1] Human segmentation paper [PP-HumanSeg](./paper.md) was published in WACV 2022 Workshop, and open-sourced Connectivity Learning (SCL) method and large-scale video conferencing dataset.
+- [2021-7] The COVID-19 epidemic has catalyzed the demand for remote office, and video conferencing products have exploded rapidly. Baidu Video Conference can realize one-second joining on the web side. The virtual background function adopts our PP-HumanSeg-Lite model to realize real-time background replacement and background blur function, protect user privacy, and increase the fun in the meeting.
+
+<p align="center">
+<img src="https://github.com/LutaoChu/transfer_station/raw/master/conference.gif" width="60%" height="60%">
+</p>
 
 ## Content
 - [Human segmentation model](#Human-segmentation-model)
@@ -47,7 +53,7 @@ NOTE:
 
 #### Model performance
 
-| Model | Input Size | FLOPS | Parameters | Latency | Model Size |
+| Model | Input Size | FLOPs | Parameters | Latency | Model Size |
 |-|-|-|-|-|-|
 | PP-HumanSeg-Server | 512x512 | 114G | 26.8M | 37.96ms | 103Mb |
 | PP-HumanSeg-Mobile | 192x192 | 584M | 1.54M | 13.17ms | 5.9Mb |
@@ -60,11 +66,11 @@ For the portrait segmentation task, PP-HumanSeg has opened a portrait segmentati
 
 | Model | Model Description | Checkpoint | Inference Model |
 | --- | --- | --- | ---|
-| PP-HumanSeg-Lite | Ultra-lightweight model, suitable for real-time segmentation scenarios on the web or mobile, such as mobile phone selfies, web video conferences, the model structure is [Paddle self-developed model](../../configs/pp_humanseg_lite/README.md), recommended input size (398, 224) | [lite_portrait_ckpt](https://paddleseg.bj.bcebos.com/dygraph/ppseg/ppseg_lite_portrait_398x224.tar.gz) | [lite_portrait_inference](https://paddleseg.bj.bcebos.com/dygraph/ppseg/ppseg_lite_portrait_398x224_with_softmax.tar.gz) |
+| PP-HumanSeg-Lite | Ultra-lightweight model, suitable for real-time segmentation scenarios on the web or mobile, such as mobile phone selfies, web video conferences, the model structure is [Paddle self-developed model](../../configs/pp_humanseg_lite/README.md), suitable for landscape size input, recommended input size (398, 224) | [lite_portrait_ckpt](https://paddleseg.bj.bcebos.com/dygraph/ppseg/ppseg_lite_portrait_398x224.tar.gz) | [lite_portrait_inference](https://paddleseg.bj.bcebos.com/dygraph/ppseg/ppseg_lite_portrait_398x224_with_softmax.tar.gz) |
 
 #### Model performance
 
-| Model | Input Size | FLOPS | Parameters | Latency | Model Size |
+| Model | Input Size | FLOPs | Parameters | Latency | Model Size |
 |-|-|-|-|-|-|
 | PP-HumanSeg-Lite | 398x224 | 266M | 137K | 23.49ms | 543Kb |
 | PP-HumanSeg-Lite | 288x162 | 138M | 137K | 15.62ms | 543Kb |
@@ -197,8 +203,8 @@ export CUDA_VISIBLE_DEVICES=0 # Set 1 available card
 # Please execute the following command under windows
 # set CUDA_VISIBLE_DEVICES=0
 python train.py \
---config configs/fcn_hrnetw18_small_v1_humanseg_192x192_mini_supervisely.yml \
---save_dir saved_model/fcn_hrnetw18_small_v1_humanseg_192x192_mini_supervisely \
+--config configs/pp_humanseg_mobile_192x192_mini_supervisely.yml \
+--save_dir saved_model/pp_humanseg_mobile_192x192_mini_supervisely \
 --save_interval 100 --do_eval --use_vdl
 ````
 
@@ -211,16 +217,16 @@ python train.py --help
 Use the following command to evaluate
 ```bash
 python val.py \
---config configs/fcn_hrnetw18_small_v1_humanseg_192x192_mini_supervisely.yml \
---model_path saved_model/fcn_hrnetw18_small_v1_humanseg_192x192_mini_supervisely/best_model/model.pdparams
+--config configs/pp_humanseg_mobile_192x192_mini_supervisely.yml \
+--model_path saved_model/pp_humanseg_mobile_192x192_mini_supervisely/best_model/model.pdparams
 ```
 
 ### Predict
 Use the following command to make predictions, the prediction results are saved in the `./output/result/` folder by default.
 ```bash
 python predict.py \
---config configs/fcn_hrnetw18_small_v1_humanseg_192x192_mini_supervisely.yml \
---model_path saved_model/fcn_hrnetw18_small_v1_humanseg_192x192_mini_supervisely/best_model/model.pdparams \
+--config configs/pp_humanseg_mobile_192x192_mini_supervisely.yml \
+--model_path saved_model/pp_humanseg_mobile_192x192_mini_supervisely/best_model/model.pdparams \
 --image_path data/human_image.jpg
 ```
 
@@ -234,11 +240,13 @@ export CUDA_VISIBLE_DEVICES=0 # Set 1 available card
 # Please execute the following command under windows
 # set CUDA_VISIBLE_DEVICES=0
 python ../../export.py \
---config configs/fcn_hrnetw18_small_v1_humanseg_192x192_mini_supervisely.yml \
---model_path saved_model/fcn_hrnetw18_small_v1_humanseg_192x192_mini_supervisely/best_model/model.pdparams \
---save_dir export_model/fcn_hrnetw18_small_v1_humanseg_192x192_mini_supervisely_with_softmax \
+--config configs/pp_humanseg_mobile_192x192_mini_supervisely.yml \
+--model_path saved_model/pp_humanseg_mobile_192x192_mini_supervisely/best_model/model.pdparams \
+--save_dir export_model/pp_humanseg_mobile_192x192_mini_supervisely_with_softmax \
 --without_argmax --with_softmax
 ```
+
+[Note] The soft prediction result is used here, which can carry transparency and make the edges smoother. So when exporting a model, you must use `--without_argmax --with_softmax` parameter.
 
 Export the PP-HumanSeg-Lite model:
 
@@ -249,6 +257,8 @@ python ../../export.py \
 --model_path pretrained_model/ppseg_lite_portrait_398x224/model.pdparams \
 --without_argmax --with_softmax
 ```
+
+The exported ymls corresponding to other PP-HumanSeg models are located in the `configs/` and `../../configs/pp_humanseg_lite/` directories.
 
 ### Export parameter
 
