@@ -92,13 +92,13 @@ class Iron(Dataset):
         else:
             data_dir = test_dir
 
-        img_files = sorted(glob.glob(os.path.join(data_dir, "images", '*.jpg')))
+        img_files = sorted(glob.glob(os.path.join(data_dir, "images", '*.png')))
 
         if mode == 'test':
             self.file_list = [[img_path, ] for img_path in img_files]
         else:
             label_files = sorted(
-                glob.glob(os.path.join(data_dir, "labels", '*_rawlabel.png')))
+                glob.glob(os.path.join(data_dir, "labels", '*.png')))
 
             # # resample
             # add_list_img = []
@@ -120,4 +120,5 @@ class Iron(Dataset):
             ]
             for img, label in self.file_list:
                 img_name = os.path.split(img)[-1]
-                assert img_name[:-4] in label, print(img, label)
+                # assert img_name[:-4] in label, print(img, label)
+                assert img[-4:] == label[-4:], print(img, label)

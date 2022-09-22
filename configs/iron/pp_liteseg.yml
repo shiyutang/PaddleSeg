@@ -30,6 +30,8 @@ train_dataset:
     - type: RandomPaddingCrop
       crop_size: [1920, 1080]
     - type: RandomHorizontalFlip
+    - type: RandomVerticalFlip
+      prob: 0.5
     - type: RandomDistort
       brightness_range: 0.5
       contrast_range: 0.5
