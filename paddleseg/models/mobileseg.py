@@ -250,10 +250,11 @@ class MobileContextModule(nn.Layer):
         self.align_corners = align_corners
 
     def _make_stage(self, in_channels, out_channels, size):
-        prior = nn.AdaptiveAvgPool2D(output_size=size)
+       # prior = nn.AdaptiveAvgPool2D(output_size=size)
         conv = layers.ConvBNReLU(
-            in_channels=in_channels, out_channels=out_channels, kernel_size=1)
-        return nn.Sequential(prior, conv)
+            in_channels, out_channels, 1, 'same',  dilation=size)
+        # return nn.Sequential(prior, conv)
+        return conv
 
     def forward(self, input):
         out = None

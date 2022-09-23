@@ -27,10 +27,10 @@ model:
   backbone:
     type: MobileNetV3_large_x1_0  # out channels: [24, 40, 112, 160]
     pretrained: https://paddleseg.bj.bcebos.com/dygraph/backbone/mobilenetv3_large_x1_0_ssld.tar.gz
-  cm_bin_sizes: [1, 2, 4]
+  cm_bin_sizes: [2, 4, 8]
   cm_out_ch: 128
   arm_out_chs: [32, 64, 128]
-  seg_head_inter_chs: [64, 64, 64]
+  seg_head_inter_chs: [32, 32, 32]
 
 train_dataset:
   transforms:
