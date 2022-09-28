@@ -148,8 +148,25 @@ class MobileSegHead(nn.Layer):
     def __init__(self, backbone_out_chs, arm_out_chs, cm_bin_sizes, cm_out_ch,
                  arm_type, resize_mode, use_last_fuse):
         super().__init__()
-        self.cm = MobileContextModule(
-            sum(backbone_out_chs), cm_out_ch, cm_out_ch, cm_bin_sizes)
+
+        from .backbones import InjectionMultiSum, BasicLayer
+        dpr = [x.item() for x in paddle.linspace(0, 0., 4)]
+
+        self.SASE = BasicLayer(
+            block_num=4,
+            embedding_dim=sum(backbone_out_chs),
+            key_dim=16,
+            num_heads=8,
+            mlp_ratios=2,
+            attn_ratio=2,
+            drop=0,
+            attn_drop=0,
+            drop_path=dpr,
+            act_layer=nn.ReLU6,
+            lr_mult=1.0)
+
+        # self.cm = MobileContextModule(
+        #     sum(backbone_out_chs), cm_out_ch, cm_out_ch, cm_bin_sizes)
         # self.cm = MobileContextModule(backbone_out_chs[-1], cm_out_ch,
         #                               cm_out_ch, cm_bin_sizes)
 
@@ -167,7 +184,6 @@ class MobileSegHead(nn.Layer):
         #         low_chs, high_ch, out_ch, ksize=3, resize_mode=resize_mode)
         #     self.arm_list.append(arm)
 
-        from .backbones import InjectionMultiSum
         injection_out_channels = [128, 128, 128]
         self.inject_list = nn.LayerList()
         for i in range(len(backbone_out_chs)):
@@ -175,7 +191,7 @@ class MobileSegHead(nn.Layer):
                 backbone_out_chs[i],
                 injection_out_channels[i],
                 activations=nn.ReLU6,
-                in_channels_global=cm_out_ch,
+                in_channels_global=312,
                 lr_mult=1.0)
             self.inject_list.append(injection)
 
@@ -213,8 +229,9 @@ class MobileSegHead(nn.Layer):
         attention = layers.SeperableAttentionRefinement(in_cm_feat.shape[1],
                                                         in_cm_feat.shape[1])
         in_cm_feat += attention(in_cm_feat)
-        high_feat = self.cm(in_cm_feat)
 
+        high_feat = self.SASE(in_cm_feat)
+        # high_feat = self.cm(in_cm_feat)
         # high_feat = self.cm(in_feat_list[-1])
         out_feat_list = []
 
@@ -283,15 +300,15 @@ class MobileContextModule(nn.Layer):
 
     def forward(self, input):
         out = None
-        input_shape = paddle.shape(input)[2:]
+        # input_shape = paddle.shape(input)[2:]
 
         for stage in self.stages:
             x = stage(input)
-            x = F.interpolate(
-                x,
-                input_shape,
-                mode='bilinear',
-                align_corners=self.align_corners)
+            # x = F.interpolate(
+            #     x,
+            #     input_shape,
+            #     mode='bilinear',
+            #     align_corners=self.align_corners)
             if out is None:
                 out = x
             else:
