@@ -114,7 +114,7 @@ class MobileSeg(nn.Layer):
         for x in feats_head[1:]:
             x = F.interpolate(
                 x,
-                feats_head[0].shape[2:],
+                paddle.shape(feats_head[0])[2:],
                 mode='bilinear',
                 align_corners=False)
             out_x += x
@@ -172,8 +172,8 @@ class MobileSegHead(nn.Layer):
 
         assert hasattr(layers,arm_type), \
             "Not support arm_type ({})".format(arm_type)
-        arm_class = eval("layers." + arm_type)
 
+        # arm_class = eval("layers." + arm_type)
         # self.arm_list = nn.LayerList()  # [..., arm8, arm16, arm32]
         # for i in range(len(backbone_out_chs)):
         #     low_chs = backbone_out_chs[i]
@@ -191,9 +191,11 @@ class MobileSegHead(nn.Layer):
                 backbone_out_chs[i],
                 injection_out_channels[i],
                 activations=nn.ReLU6,
-                in_channels_global=312,
+                in_channels_global=sum(backbone_out_chs),
                 lr_mult=1.0)
             self.inject_list.append(injection)
+
+        self.attention = layers.SeperableAttentionRefinement(sum(backbone_out_chs), sum(backbone_out_chs))
 
         self.use_last_fuse = use_last_fuse
         if self.use_last_fuse:
@@ -226,9 +228,7 @@ class MobileSegHead(nn.Layer):
         feat1 = F.avg_pool2d(
             in_feat_list[1], kernel_size=2, stride=2, padding=0)
         in_cm_feat = paddle.concat([feat0, feat1, in_feat_list[2]], axis=1)
-        attention = layers.SeperableAttentionRefinement(in_cm_feat.shape[1],
-                                                        in_cm_feat.shape[1])
-        in_cm_feat += attention(in_cm_feat)
+        in_cm_feat += self.attention(in_cm_feat)
 
         high_feat = self.SASE(in_cm_feat)
         # high_feat = self.cm(in_cm_feat)
