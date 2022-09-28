@@ -408,16 +408,23 @@ class PyramidPoolAgg(nn.Layer):
 
 
 class InjectionMultiSum(nn.Layer):
-    def __init__(self, in_channels, out_channels, activations=None,
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 activations=None,
+                 in_channels_global=None,
                  lr_mult=1.0):
         super(InjectionMultiSum, self).__init__()
+
+        if in_channels_global is None:
+            in_channels_global = in_channels
 
         self.local_embedding = ConvBNAct(
             in_channels, out_channels, kernel_size=1, lr_mult=lr_mult)
         self.global_embedding = ConvBNAct(
-            in_channels, out_channels, kernel_size=1, lr_mult=lr_mult)
+            in_channels_global, out_channels, kernel_size=1, lr_mult=lr_mult)
         self.global_act = ConvBNAct(
-            in_channels, out_channels, kernel_size=1, lr_mult=lr_mult)
+            in_channels_global, out_channels, kernel_size=1, lr_mult=lr_mult)
         self.act = HSigmoid()
 
     def forward(self, x_low, x_global):

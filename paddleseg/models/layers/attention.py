@@ -270,3 +270,28 @@ class CAM(nn.Layer):
 
         out = self.gamma * feat + x
         return out
+
+
+class SeperableAttentionRefinement(nn.Layer):
+    """
+    AttentionRefinement module of BiseNetV1 model
+    Args:
+        in_channels (int): The number of input channels in spatial path module.
+        out_channels (int): The number of output channels in spatial path module.
+    """
+
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.conv_3x3 = layers.SeparableConvBNReLU(
+            in_channels, out_channels, 3, stride=1, padding=1, bias_attr=False)
+        self.channel_attention = nn.Sequential(
+            nn.AdaptiveAvgPool2D(1),
+            layers.ConvBNReLU(
+                out_channels, out_channels, 1, bias_attr=False),
+            nn.Sigmoid(), )
+
+    def forward(self, x):
+        x = self.conv_3x3(x)
+        se = self.channel_attention(x)
+        x = x * se
+        return x

@@ -15,7 +15,7 @@
 from .layer_libs import ConvBNReLU, ConvBN, SeparableConvBNReLU, DepthwiseConvBN, AuxLayer, SyncBatchNorm, JPU, ConvBNPReLU, ConvBNAct, ConvBNLeakyReLU
 from .activation import Activation
 from .pyramid_pool import ASPPModule, PPModule
-from .attention import AttentionBlock
+from .attention import AttentionBlock, SeperableAttentionRefinement
 from .nonlocal2d import NonLocal2D
 from .wrap_functions import *
 from .tensor_fusion import UAFM_SpAtten, UAFM_SpAtten_S, UAFM_ChAtten, UAFM_ChAtten_S, UAFM, UAFMMobile, UAFMMobile_SpAtten

@@ -72,7 +72,9 @@ class MobileSeg(nn.Layer):
         assert len(backbone_indices) >= 1, "The lenght of backbone_indices " \
             "should not be lesser than 1"
         self.backbone_indices = backbone_indices  # [..., x16_id, x32_id]
-        backbone_out_chs = [backbone.feat_channels[i] for i in backbone_indices]
+        backbone_out_chs = [
+            backbone.feat_channels[i] for i in backbone_indices
+        ]  # [40, 112, 160]
 
         # head
         if len(arm_out_chs) == 1:
@@ -89,8 +91,9 @@ class MobileSeg(nn.Layer):
         assert len(seg_head_inter_chs) == len(backbone_indices), "The length of " \
             "seg_head_inter_chs and backbone_indices should be equal"
         self.seg_heads = nn.LayerList()  # [..., head_16, head32]
-        for in_ch, mid_ch in zip(arm_out_chs, seg_head_inter_chs):
-            self.seg_heads.append(SegHead(in_ch, mid_ch, num_classes))
+        # for in_ch, mid_ch in zip(arm_out_chs, seg_head_inter_chs):
+        #     self.seg_heads.append(SegHead(in_ch, mid_ch, num_classes))
+        self.seg_head = SegHead(128, seg_head_inter_chs[0], num_classes)
 
         # pretrained
         self.pretrained = pretrained
@@ -107,20 +110,20 @@ class MobileSeg(nn.Layer):
         feats_selected = [feats_backbone[i] for i in self.backbone_indices]
         feats_head = self.ppseg_head(feats_selected)  # [..., x8, x16, x32]
 
-        if self.training:
-            logit_list = []
-            for x, seg_head in zip(feats_head, self.seg_heads):
-                x = seg_head(x)
-                logit_list.append(x)
-            logit_list = [
-                F.interpolate(
-                    x, x_hw, mode='bilinear', align_corners=False)
-                for x in logit_list
-            ]
-        else:
-            x = self.seg_heads[0](feats_head[0])
-            x = F.interpolate(x, x_hw, mode='bilinear', align_corners=False)
-            logit_list = [x]
+        out_x = feats_head[0]
+        for x in feats_head[1:]:
+            x = F.interpolate(
+                x,
+                feats_head[0].shape[2:],
+                mode='bilinear',
+                align_corners=False)
+            out_x += x
+
+        x = self.seg_head(out_x)
+        logit_list = [
+            F.interpolate(
+                x, x_hw, mode='bilinear', align_corners=False)
+        ]
 
         return logit_list
 
@@ -145,23 +148,36 @@ class MobileSegHead(nn.Layer):
     def __init__(self, backbone_out_chs, arm_out_chs, cm_bin_sizes, cm_out_ch,
                  arm_type, resize_mode, use_last_fuse):
         super().__init__()
-
-        self.cm = MobileContextModule(backbone_out_chs[-1], cm_out_ch,
-                                      cm_out_ch, cm_bin_sizes)
+        self.cm = MobileContextModule(
+            sum(backbone_out_chs), cm_out_ch, cm_out_ch, cm_bin_sizes)
+        # self.cm = MobileContextModule(backbone_out_chs[-1], cm_out_ch,
+        #                               cm_out_ch, cm_bin_sizes)
 
         assert hasattr(layers,arm_type), \
             "Not support arm_type ({})".format(arm_type)
         arm_class = eval("layers." + arm_type)
 
-        self.arm_list = nn.LayerList()  # [..., arm8, arm16, arm32]
+        # self.arm_list = nn.LayerList()  # [..., arm8, arm16, arm32]
+        # for i in range(len(backbone_out_chs)):
+        #     low_chs = backbone_out_chs[i]
+        #     high_ch = cm_out_ch if i == len(
+        #         backbone_out_chs) - 1 else arm_out_chs[i + 1]
+        #     out_ch = arm_out_chs[i]
+        #     arm = arm_class(
+        #         low_chs, high_ch, out_ch, ksize=3, resize_mode=resize_mode)
+        #     self.arm_list.append(arm)
+
+        from .backbones import InjectionMultiSum
+        injection_out_channels = [128, 128, 128]
+        self.inject_list = nn.LayerList()
         for i in range(len(backbone_out_chs)):
-            low_chs = backbone_out_chs[i]
-            high_ch = cm_out_ch if i == len(
-                backbone_out_chs) - 1 else arm_out_chs[i + 1]
-            out_ch = arm_out_chs[i]
-            arm = arm_class(
-                low_chs, high_ch, out_ch, ksize=3, resize_mode=resize_mode)
-            self.arm_list.append(arm)
+            injection = InjectionMultiSum(
+                backbone_out_chs[i],
+                injection_out_channels[i],
+                activations=nn.ReLU6,
+                in_channels_global=cm_out_ch,
+                lr_mult=1.0)
+            self.inject_list.append(injection)
 
         self.use_last_fuse = use_last_fuse
         if self.use_last_fuse:
@@ -189,15 +205,24 @@ class MobileSegHead(nn.Layer):
                 x2, x4 and x8 are optional.
                 The length of in_feat_list and out_feat_list are the same.
         """
+        feat0 = F.avg_pool2d(
+            in_feat_list[0], kernel_size=4, stride=4, padding=0)
+        feat1 = F.avg_pool2d(
+            in_feat_list[1], kernel_size=2, stride=2, padding=0)
+        in_cm_feat = paddle.concat([feat0, feat1, in_feat_list[2]], axis=1)
+        attention = layers.SeperableAttentionRefinement(in_cm_feat.shape[1],
+                                                        in_cm_feat.shape[1])
+        in_cm_feat += attention(in_cm_feat)
+        high_feat = self.cm(in_cm_feat)
 
-        high_feat = self.cm(in_feat_list[-1])
+        # high_feat = self.cm(in_feat_list[-1])
         out_feat_list = []
 
-        for i in reversed(range(len(in_feat_list))):
+        for i in reversed(range(len(in_feat_list))):  #  [x32, x16, x8]
             low_feat = in_feat_list[i]
-            arm = self.arm_list[i]
-            high_feat = arm(low_feat, high_feat)
-            out_feat_list.insert(0, high_feat)
+            inject = self.inject_list[i]
+            out_feat = inject(low_feat, high_feat)
+            out_feat_list.insert(0, out_feat)
 
         if self.use_last_fuse:
             x_list = [out_feat_list[0]]
@@ -250,9 +275,9 @@ class MobileContextModule(nn.Layer):
         self.align_corners = align_corners
 
     def _make_stage(self, in_channels, out_channels, size):
-       # prior = nn.AdaptiveAvgPool2D(output_size=size)
+        # prior = nn.AdaptiveAvgPool2D(output_size=size)
         conv = layers.ConvBNReLU(
-            in_channels, out_channels, 1, 'same',  dilation=size)
+            in_channels, out_channels, 3, 'same', dilation=size)
         # return nn.Sequential(prior, conv)
         return conv
 
