@@ -186,6 +186,7 @@ class MobileSegHead(nn.Layer):
 
         injection_out_channels = [128, 128, 128]
         self.inject_list = nn.LayerList()
+        self.PAM_attention_list = nn.LayerList()
         for i in range(len(backbone_out_chs)):
             injection = InjectionMultiSum(
                 backbone_out_chs[i],
@@ -194,8 +195,11 @@ class MobileSegHead(nn.Layer):
                 in_channels_global=sum(backbone_out_chs),
                 lr_mult=1.0)
             self.inject_list.append(injection)
+            PAM_attention = layers.PAM(backbone_out_chs[i])
+            self.PAM_attention_list.append(PAM_attention)
 
-        self.attention = layers.SeperableAttentionRefinement(sum(backbone_out_chs), sum(backbone_out_chs))
+        self.attention = layers.SeperableAttentionRefinement(
+            sum(backbone_out_chs), sum(backbone_out_chs))
 
         self.use_last_fuse = use_last_fuse
         if self.use_last_fuse:
@@ -223,11 +227,16 @@ class MobileSegHead(nn.Layer):
                 x2, x4 and x8 are optional.
                 The length of in_feat_list and out_feat_list are the same.
         """
-        feat0 = F.avg_pool2d(
-            in_feat_list[0], kernel_size=4, stride=4, padding=0)
-        feat1 = F.avg_pool2d(
-            in_feat_list[1], kernel_size=2, stride=2, padding=0)
-        in_cm_feat = paddle.concat([feat0, feat1, in_feat_list[2]], axis=1)
+        in_cm_feat_list = []
+        for i in range(len(in_feat_list)):
+            in_feat_list.append(
+                F.max_pool2d(
+                    self.PAM_attention_list[i](in_feat_list[i]),
+                    kernel_size=2**(3 - i),
+                    stride=2**(3 - i),
+                    padding=0))
+
+        in_cm_feat = paddle.concat(in_feat_list, axis=1)
         in_cm_feat += self.attention(in_cm_feat)
 
         high_feat = self.SASE(in_cm_feat)

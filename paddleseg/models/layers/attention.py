@@ -293,5 +293,5 @@ class SeperableAttentionRefinement(nn.Layer):
     def forward(self, x):
         x = self.conv_3x3(x)
         se = self.channel_attention(x)
-        x = x * se
+        x += x * se
         return x
