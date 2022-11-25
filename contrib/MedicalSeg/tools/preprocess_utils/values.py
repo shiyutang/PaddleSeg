@@ -23,6 +23,13 @@ import tools.preprocess_utils.global_var as global_var
 gpu_tag = global_var.get_value('USE_GPU')
 if gpu_tag:
     import cupy as np
+    if int(np.__version__.split(".")[0]) < 10:
+        if global_var.get_value("ALERTED_HUNORM_NUMPY") is not True:
+            print(
+                f"[Warning] Running HUNorm preprocess with cupy requires cupy version >= 10.0.0 . Installed version is {np.__version__}. Using numpy for HUNorm. Other preprocess operations are still run on GPU."
+            )
+            global_var.set_value("ALERTED_HUNORM_NUMPY", True)
+        import numpy as np
 else:
     import numpy as np
 
@@ -44,17 +51,20 @@ def label_remap(label, map_dict=None):
     return label
 
 
-def Normalize(image, min_val, max_val):
+def normalize(image, min_val=None, max_val=None):
     "Normalize the image with given min_val and max val "
     if not isinstance(image, np.ndarray):
         image = np.array(image)
-    image = (image - min_val) / (max_val - min_val)
+    if min_val is None and max_val is None:
+        image = (image - image.min()) / (image.max() - image.min())
+    else:
+        image = (image - min_val) / (max_val - min_val)
     np.clip(image, 0, 1, out=image)
 
     return image
 
 
-def HUNorm(image, HU_min=-1000, HU_max=600, HU_nan=-2000):
+def HUnorm(image, HU_min=-1200, HU_max=600, HU_nan=-2000, multiply_255=True):
     """
     Convert CT HU unit into uint8 values. First bound HU values by predfined min
     and max, and then normalize. Due to paddle.nn.conv3D doesn't support uint8, we need to convert
@@ -70,7 +80,17 @@ def HUNorm(image, HU_min=-1000, HU_max=600, HU_nan=-2000):
         image = np.array(image)
     image = np.nan_to_num(image, copy=False, nan=HU_nan)
 
+    # normalize to [0, 1]
     image = (image - HU_min) / (HU_max - HU_min)
-    np.clip(image, 0, 1, out=image)
+    if multiply_255:
+        image *= 255
+        np.clip(image, 0, 255, out=image)
 
     return image
+
+
+def ignore_label(label, label_map=None):
+    if label_map:
+        for key in list(label_map.keys()):
+            label[label == int(key)] = label_map[key]
+    return label

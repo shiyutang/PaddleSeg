@@ -56,8 +56,10 @@ def download_pretrained_model(pretrained_model):
     savename = pretrained_model.split('/')[-1]
     if not savename.endswith(('tgz', 'tar.gz', 'tar', 'zip')):
         savename = pretrained_model.split('/')[-2]
+        filename = pretrained_model.split('/')[-1]
     else:
         savename = savename.split('.')[0]
+        filename = 'model.pdparams'
 
     with generate_tempdir() as _dir:
         with filelock.FileLock(os.path.join(seg_env.TMP_HOME, savename)):
@@ -65,8 +67,9 @@ def download_pretrained_model(pretrained_model):
                 pretrained_model,
                 savepath=_dir,
                 extrapath=seg_env.PRETRAINED_MODEL_HOME,
-                extraname=savename)
-            pretrained_model = os.path.join(pretrained_model, 'model.pdparams')
+                extraname=savename,
+                filename=filename)
+            pretrained_model = os.path.join(pretrained_model, filename)
     return pretrained_model
 
 
@@ -159,6 +162,8 @@ def get_image_list(image_path):
         for root, dirs, files in os.walk(image_path):
             for f in files:
                 if '.ipynb_checkpoints' in root:
+                    continue
+                if f.startswith('.'):
                     continue
                 if os.path.splitext(f)[-1] in valid_suffix:
                     image_list.append(os.path.join(root, f))

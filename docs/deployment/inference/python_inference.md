@@ -5,31 +5,11 @@ English|[简体中文](python_inference_cn.md)
 
 This document introduces how to deploy the segmentation model on the server side (Nvidia GPU or X86 CPU) by Python api of Paddle Inference.
 
-Paddle provides multiple prediction engine deployment models for different scenarios (as shown in the figure below), for more details, please refer to [document](https://paddleinference.paddlepaddle.org.cn/product_introduction/summary.html).
+Paddle provides multiple prediction engine deployment models for different scenarios (as shown in the figure below), for more details, please refer to [document](https://www.paddlepaddle.org.cn/inference/v2.3/product_introduction/summary.html).
 
 ![inference_ecosystem](https://user-images.githubusercontent.com/52520497/130720374-26947102-93ec-41e2-8207-38081dcc27aa.png)
 
-## 2. Prepare the model and data
-
-Download [sample model](https://paddleseg.bj.bcebos.com/dygraph/demo/bisenet_demo_model.tar.gz) for testing.
-
-If you want to use other models, please refer to [document](../../model_export.md) to export the model, and then test it.
-
-```shell
-wget https://paddleseg.bj.bcebos.com/dygraph/demo/bisenet_demo_model.tar.gz
-tar zxvf bisenet_demo_model.tar.gz
-```
-
-Download a [picture](https://paddleseg.bj.bcebos.com/dygraph/demo/cityscapes_demo.png) of cityscapes to test.
-
-If the model is trained using other dataset, please prepare test images by yourself.
-
-```
-wget https://paddleseg.bj.bcebos.com/dygraph/demo/cityscapes_demo.png
-```
-
-## 3. Prepare the deployment environment
-
+## 2. Prepare the deployment environment
 
 Paddle Inference is the native inference library of Paddle, which provides server-side deployment model. Using the Python interface to deploy Paddle Inference model, you need to install PaddlePaddle according to the deployment situation. That is, the Python interface of Paddle Inference is integrated in PaddlePaddle.
 
@@ -52,10 +32,11 @@ If you use the Naive method to deploy the model on the Nvidia GPU, you can refer
 python -m pip install paddlepaddle-gpu==2.1.2.post101 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
 ```
 
-If you use TensorRT to deploy the model on the Nvidia GPU, please refer to the [document](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html) to prepare the CUDA environment and install the corresponding GPU version of PaddlePaddle（recoment paddlepaddle-gpu>=2.1. For example:
+If you use TensorRT to deploy the model on the Nvidia GPU, please refer to the [document](https://www.paddlepaddle.org.cn/inference/v2.3/user_guides/download_lib.html#python) to prepare the CUDA environment and install the corresponding GPU version of PaddlePaddle（recoment paddlepaddle-gpu>=2.1. For example:
 
 ```
-python -m pip install paddlepaddle-gpu==[version] -f https://www.paddlepaddle.org.cn/whl/stable/tensorrt.html
+wget https://paddle-inference-lib.bj.bcebos.com/2.3.2/python/Linux/GPU/x86-64_gcc8.2_avx_mkl_cuda10.2_cudnn8.1.1_trt7.2.3.4/paddlepaddle_gpu-2.3.2-cp37-cp37m-linux_x86_64.whl
+pip install paddlepaddle_gpu-2.3.2-cp37-cp37m-linux_x86_64.whl
 ```
 
 To deploy the model using TensorRT on Nvidia GPU, you need to download the TensorRT library.
@@ -68,15 +49,34 @@ wget https://paddle-inference-dist.bj.bcebos.com/tensorrt_test/cuda10.2-cudnn8.0
 
 Download and decompress the TensorRT library, and add the path of the TensorRT library to LD_LIBRARY_PATH, `export LD_LIBRARY_PATH=/path/to/tensorrt/:${LD_LIBRARY_PATH}`
 
+## 3. Prepare the model and data
+
+Download [sample model](https://paddleseg.bj.bcebos.com/dygraph/demo/pp_liteseg_infer_model.tar.gz) for testing.
+If you want to use other models, please refer to [document](../../model_export.md) to export the model, and then test it.
+
+```shell
+# In the root of PaddleSeg
+cd PaddleSeg
+wget https://paddleseg.bj.bcebos.com/dygraph/demo/pp_liteseg_infer_model.tar.gz
+tar zxvf pp_liteseg_infer_model.tar.gz
+```
+
+Download a [picture](https://paddleseg.bj.bcebos.com/dygraph/demo/cityscapes_demo.png) of cityscapes to test.
+If the model is trained using other dataset, please prepare test images by yourself.
+
+```
+wget https://paddleseg.bj.bcebos.com/dygraph/demo/cityscapes_demo.png
+```
+
 
 ## 4. Inference
 
-In the root directory of PaddleSeg, execute the following command to predict:
+In the root directory of PaddleSeg, execute the following command to predict. Then, the result is saved in `output/cityscapes_demo.png`.
 
 ```shell
 python deploy/python/infer.py \
-    --config /path/to/model/deploy.yaml \
-    --image_path /path/to/image/path/or/dir
+    --config ./pp_liteseg_infer_model/deploy.yaml \
+    --image_path ./cityscapes_demo.png
 ```
 
 **The parameter description is as follows:**
@@ -88,7 +88,8 @@ python deploy/python/infer.py \
 |save_dir|Path to save result|No|output|
 |device|Inference device, options are'cpu','gpu'|No|'gpu'|
 |use_trt|Whether to enable TensorRT to accelerate prediction \(when device=gpu, this parameter takes effect\)|No|False|
-|precision|The precision when enable TensorRT, the options are'fp32','fp16','int8' \(when device=gpu, this parameter takes effect\)|No|'fp32'|
+|precision|The precision when enable TensorRT, the options are'fp32','fp16','int8' \(when device=gpu, use_trt=True this parameter takes effect\)|No|'fp32'|
+|min_subgraph_size|Set the min size of trt subgraph \(when device=gpu, use_trt=True this parameter takes effect\)|No|3|
 |enable_auto_tune|When Auto Tune is turned on, part of the test data will be collected dynamic shapes offline for TRT deployment \(this parameter take effect when device=gpu, use_trt=True, and paddle version>=2.2\)|No| False |
 |cpu_threads|The number of cpu threads \(when device=cpu, this parameter takes effect\)|No|10|
 |enable_mkldnn|whether to use MKL-DNN to accelerate cpu prediction \(when device=cpu, this parameter takes effect\)|No|False|

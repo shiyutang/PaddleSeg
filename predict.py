@@ -101,12 +101,23 @@ def parse_args():
         help='Save images with a custom color map. Default: None, use paddleseg\'s default color map.',
         type=int,
         default=None)
+
+    # set device
+    parser.add_argument(
+        '--device',
+        dest='device',
+        help='Device place to be set, which can be GPU, XPU, NPU, MLU, CPU',
+        default='gpu',
+        type=str)
+
     return parser.parse_args()
 
 
 def get_test_config(cfg, args):
 
     test_config = cfg.test_config
+    if 'aug_eval' in test_config:
+        test_config.pop('aug_eval')
     if args.aug_pred:
         test_config['aug_pred'] = args.aug_pred
         test_config['scales'] = args.scales
@@ -130,14 +141,25 @@ def get_test_config(cfg, args):
 
 def main(args):
     env_info = get_sys_env()
-    place = 'gpu' if env_info['Paddle compiled with cuda'] and env_info[
-        'GPUs used'] else 'cpu'
+
+    if args.device == 'gpu' and env_info[
+            'Paddle compiled with cuda'] and env_info['GPUs used']:
+        place = 'gpu'
+    elif args.device == 'xpu' and paddle.is_compiled_with_xpu():
+        place = 'xpu'
+    elif args.device == 'npu' and paddle.is_compiled_with_npu():
+        place = 'npu'
+    elif args.device == 'mlu' and paddle.is_compiled_with_mlu():
+        place = 'mlu'
+    else:
+        place = 'cpu'
 
     paddle.set_device(place)
     if not args.cfg:
         raise RuntimeError('No configuration file specified.')
 
     cfg = Config(args.cfg)
+    cfg.check_sync_info()
 
     msg = '\n---------------Config Information---------------\n'
     msg += str(cfg)
@@ -159,6 +181,9 @@ def main(args):
         image_dir=image_dir,
         save_dir=args.save_dir,
         **test_config)
+
+    logger.warning("This `predict.py` will be removed in version 2.8, "
+                   "please use `tools/predict.py`.")
 
 
 if __name__ == '__main__':

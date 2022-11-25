@@ -1,255 +1,101 @@
 简体中文 | [English](README.md)
 
-# Matting
-Matting（精细化分割/影像去背/抠图）是指借由计算前景的颜色和透明度，将前景从影像中撷取出来的技术，可用于替换背景、影像合成、视觉特效，在电影工业中被广泛地使用。影像中的每个像素会有代表其前景透明度的值，称作阿法值（Alpha），一张影像中所有阿法值的集合称作阿法遮罩（Alpha Matte），将影像被遮罩所涵盖的部分取出即可完成前景的分离。
+# Image Matting
+
+## 目录
+* [简介](#简介)
+* [更新动态](#更新动态)
+* [技术交流](#技术交流)
+* [模型库](#模型库)
+* [使用教程](#使用教程)
+* [社区贡献](#社区贡献)
+* [学术引用](#学术引用)
+
+
+## 简介
+
+Image Matting（精细化分割/影像去背/抠图）是指借由计算前景的颜色和透明度，将前景从影像中撷取出来的技术，可用于替换背景、影像合成、视觉特效，在电影工业中被广泛地使用。
+影像中的每个像素会有代表其前景透明度的值，称作阿法值（Alpha），一张影像中所有阿法值的集合称作阿法遮罩（Alpha Matte），将影像被遮罩所涵盖的部分取出即可完成前景的分离。
 
 
 <p align="center">
-<img src="https://user-images.githubusercontent.com/30919197/141714637-be8af7b1-ccd0-49df-a4f9-10423705802e.jpg" width="100%" height="100%">
+<img src="https://user-images.githubusercontent.com/30919197/179751613-d26f2261-7bcf-4066-a0a4-4c818e7065f0.gif" width="100%" height="100%">
 </p>
 
 ## 更新动态
-2021.11 Matting项目开源, 实现图像抠图功能。
-【1】支持Matting模型：DIM， MODNet。
-【2】支持模型导出及Python部署。
-【3】支持背景替换功能。
-【4】支持人像抠图Android部署
+* 2022.11
+  * **开源自研轻量级抠图SOTA模型PP-MattingV2**。对比MODNet, PP-MattingV2推理速度提升44.6%， 误差平均相对减小17.91%。
+  * 调整文档结构，完善模型库信息。
+  * [FastDeploy](https://github.com/PaddlePaddle/FastDeploy)部署支持PP-MattingV2, PP-Matting, PP-HumanMatting和MODNet模型。
+* 2022.07
+  * 开源PP-Matting代码；新增ClosedFormMatting、KNNMatting、FastMatting、LearningBaseMatting和RandomWalksMatting传统机器学习算法；新增GCA模型。
+  * 完善目录结构；支持指定指标进行评估。
+* 2022.04
+  * **开源自研高精度抠图SOTA模型PP-Matting**；新增PP-HumanMatting高分辨人像抠图模型。
+  * 新增Grad、Conn评估指标；新增前景评估功能，利用[ML](https://arxiv.org/pdf/2006.14970.pdf)算法在预测和背景替换时进行前景评估。
+  * 新增GradientLoss和LaplacianLoss；新增RandomSharpen、RandomSharpen、RandomReJpeg、RSSN数据增强策略。
+* 2021.11
+  * **Matting项目开源**, 实现图像抠图功能。
+  * 支持Matting模型：DIM， MODNet；支持模型导出及Python部署；支持背景替换功能；支持人像抠图Android部署。
 
-## 目录
-- [环境配置](#环境配置)
-- [模型](#模型)
-- [数据准备](#数据准备)
-- [训练评估预测](#训练评估预测)
-- [背景替换](#背景替换)
-- [导出部署](#导出部署)
-- [人像抠图Android部署](./deploy/human_matting_android_demo/README.md)
+## 技术交流
 
+* 如果大家有使用问题和功能建议, 可以通过[GitHub Issues](https://github.com/PaddlePaddle/PaddleSeg/issues)提issue。
+* **欢迎大家加入PaddleSeg的微信用户群👫**（扫码填写问卷即可入群），和各界大佬交流学习，还可以**领取重磅大礼包🎁**
+  * 🔥 获取PaddleSeg的历次直播视频，最新发版信息和直播动态
+  * 🔥 获取PaddleSeg自建的人像分割数据集，整理的开源数据集
+  * 🔥 获取PaddleSeg在垂类场景的预训练模型和应用合集，涵盖人像分割、交互式分割等等
+  * 🔥 获取PaddleSeg的全流程产业实操范例，包括质检缺陷分割、抠图Matting、道路分割等等
+<div align="center">
+<img src="https://user-images.githubusercontent.com/48433081/174770518-e6b5319b-336f-45d9-9817-da12b1961fb1.jpg"  width = "200" />  
+</div>
 
-## 环境配置
+## 模型库
 
-#### 1. 安装PaddlePaddle
+针对高频应用场景 —— 人像抠图，我们训练并开源了**高质量人像抠图模型库**。根据实际应用场景，大家可以直接部署应用，也支持进行微调训练。
 
-版本要求
+模型库中包括我们自研的高精度PP-Matting模型和轻量级PP-MattingV2模型。
+- PP-Matting是PaddleSeg自研的高精度抠图模型，通过引导流设计实现语义引导下高分辨率图像抠图。追求更高精度，推荐使用该模型。
+    且该模型提供了512和1024两个分辨率级别的预训练模型。
+- PP-MattingV2是PaddleSeg自研的轻量级抠图SOTA模型，通过双层金字塔池化及空间注意力提取高级语义信息，并利用多级特征融合机制兼顾语义和细节的预测。
+    对比MODNet模型推理速度提升44.6%， 误差平均相对减小17.91%。追求更高速度，推荐使用该模型。
 
-* PaddlePaddle >= 2.0.2
+| 模型 | SAD | MSE | Grad | Conn |Params(M) | FLOPs(G) | FPS | Config File | Checkpoint | Inference Model |
+| - | - | -| - | - | - | - | -| - | - | - |
+| PP-MattingV2-512   |40.59|0.0038|33.86|38.90| 8.95 | 7.51 | 98.89 |[cfg](../configs/ppmattingv2/ppmattingv2-stdc1-human_512.yml)| [model](https://paddleseg.bj.bcebos.com/matting/models/ppmattingv2-stdc1-human_512.pdparams) | [model inference](https://paddleseg.bj.bcebos.com/matting/models/deploy/ppmattingv2-stdc1-human_512.zip) |
+| PP-Matting-512     |31.56|0.0022|31.80|30.13| 24.5 | 91.28 | 28.9 |[cfg](../configs/ppmatting/ppmatting-hrnet_w18-human_512.yml)| [model](https://paddleseg.bj.bcebos.com/matting/models/ppmatting-hrnet_w18-human_512.pdparams) | [model inference](https://paddleseg.bj.bcebos.com/matting/models/deploy/ppmatting-hrnet_w18-human_512.zip) |
+| PP-Matting-1024    |66.22|0.0088|32.90|64.80| 24.5 | 91.28 | 13.4(1024X1024) |[cfg](../configs/ppmatting/ppmatting-hrnet_w18-human_1024.yml)| [model](https://paddleseg.bj.bcebos.com/matting/models/ppmatting-hrnet_w18-human_1024.pdparams) | [model inference](https://paddleseg.bj.bcebos.com/matting/models/deploy/ppmatting-hrnet_w18-human_1024.zip) |
+| PP-HumanMatting    |53.15|0.0054|43.75|52.03| 63.9 | 135.8 (2048X2048)| 32.8(2048X2048)|[cfg](../configs/human_matting/human_matting-resnet34_vd.yml)| [model](https://paddleseg.bj.bcebos.com/matting/models/human_matting-resnet34_vd.pdparams) | [model inference](https://paddleseg.bj.bcebos.com/matting/models/deploy/pp-humanmatting-resnet34_vd.zip) |
+| MODNet-MobileNetV2 |50.07|0.0053|35.55|48.37| 6.5 | 15.7 | 68.4 |[cfg](../configs/modnet/modnet-mobilenetv2.yml)| [model](https://paddleseg.bj.bcebos.com/matting/models/modnet-mobilenetv2.pdparams) | [model inference](https://paddleseg.bj.bcebos.com/matting/models/deploy/modnet-mobilenetv2.zip) |
+| MODNet-ResNet50_vd |39.01|0.0038|32.29|37.38| 92.2 | 151.6 | 29.0 |[cfg](../configs/modnet/modnet-resnet50_vd.yml)| [model](https://paddleseg.bj.bcebos.com/matting/models/modnet-resnet50_vd.pdparams) | [model inference](https://paddleseg.bj.bcebos.com/matting/models/deploy/modnet-resnet50_vd.zip) |
+| MODNet-HRNet_W18   |35.55|0.0035|31.73|34.07| 10.2 | 28.5 | 62.6 |[cfg](../configs/modnet/modnet-hrnet_w18.yml)| [model](https://paddleseg.bj.bcebos.com/matting/models/modnet-hrnet_w18.pdparams) | [model inference](https://paddleseg.bj.bcebos.com/matting/models/deploy/modnet-hrnet_w18.zip) |
+| DIM-VGG16          |32.31|0.0233|28.89|31.45| 28.4 | 175.5| 30.4 |[cfg](../configs/dim/dim-vgg16.yml)| [model](https://paddleseg.bj.bcebos.com/matting/models/dim-vgg16.pdparams) | [model inference](https://paddleseg.bj.bcebos.com/matting/models/deploy/dim-vgg16.zip) |
 
-* Python >= 3.7+
+**注意**：
+* 指标计算数据集为PPM-100和AIM-500中的人像部分共同组成，共195张，[PPM-AIM-195](https://paddleseg.bj.bcebos.com/matting/datasets/PPM-AIM-195.zip)。
+* FLOPs和FPS计算默认模型输入大小为(512, 512), GPU为Tesla V100 32G。FPS基于Paddle Inference预测裤进行计算。
+* DIM为trimap-based的抠图方法，指标只计算过度区域部分，对于没有提供trimap的情况下，默认将0<alpha<255的区域以25像素为半径进行膨胀腐蚀后作为过度区域。
 
-由于图像分割模型计算开销大，推荐在GPU版本的PaddlePaddle下使用PaddleSeg。推荐安装10.0以上的CUDA环境。安装教程请见[PaddlePaddle官网](https://www.paddlepaddle.org.cn/install/quick?docurl=/documentation/docs/zh/install/pip/linux-pip.html)。
+## 使用教程
+* [在线体验](docs/online_demo_cn.md)
+* [快速体验](docs/quick_start_cn.md)
+* [全流程开发](docs/full_develop_cn.md)
+* [人像抠图Android部署](deploy/human_matting_android_demo/README_CN.md)
+* [数据集准备](docs/data_prepare_cn.md)
+* AI Studio第三方教程
+  * [PaddleSeg的Matting教程](https://aistudio.baidu.com/aistudio/projectdetail/3876411?contributionType=1)
+  * [PP-Matting图像抠图教程](https://aistudio.baidu.com/aistudio/projectdetail/5002963?contributionType=1)
 
-#### 2. 下载PaddleSeg仓库
+## 社区贡献
+* 感谢[钱彬(Qianbin)](https://github.com/qianbin1989228)等开发者的贡献。
+* 感谢Jizhizi Li等提出的[GFM](https://arxiv.org/abs/2010.16188) Matting框架助力PP-Matting的算法研发。
 
-```shell
-git clone https://github.com/PaddlePaddle/PaddleSeg
+## 学术引用
 ```
-
-#### 3. 安装
-
-```shell
-cd PaddleSeg
-pip install -e .
-pip install scikit-image
-cd contrib/Matting
+@article{chen2022pp,
+  title={PP-Matting: High-Accuracy Natural Image Matting},
+  author={Chen, Guowei and Liu, Yi and Wang, Jian and Peng, Juncai and Hao, Yuying and Chu, Lutao and Tang, Shiyu and Wu, Zewu and Chen, Zeyu and Yu, Zhiliang and others},
+  journal={arXiv preprint arXiv:2204.09433},
+  year={2022}
+}
 ```
-
-## 模型
-
-[PP-HumanMatting](https://paddleseg.bj.bcebos.com/matting/models/human_matting-resnet34_vd.pdparams)
-
-[DIM-VGG16](https://paddleseg.bj.bcebos.com/matting/models/dim-vgg16.pdparams)
-
-MODNet在[PPM-100](https://github.com/ZHKKKe/PPM)数据集上的性能
-
-| Backbone | SAD | MSE | Params(M) | FLOPs(G) | FPS | Link |
-|-|-|-|-|-|-|-|
-|MobileNetV2|112.73|0.0098|6.5|15.7|67.5|[model](https://paddleseg.bj.bcebos.com/matting/models/modnet-mobilenetv2.pdparams)|
-|ResNet50_vd|104.14|0.0090|92.2|151.6|28.6|[model](https://paddleseg.bj.bcebos.com/matting/models/modnet-resnet50_vd.pdparams)|
-|HRNet_W18|77.96|0.0054|10.2|28.5|10.9|[model](https://paddleseg.bj.bcebos.com/matting/models/modnet-hrnet_w18.pdparams)|
-
-注意：模型输入大小为(512, 512), GPU为Tesla V100 32G。
-
-## 数据准备
-
-利用MODNet开源的[PPM-100](https://github.com/ZHKKKe/PPM)数据集作为我们教程的示例数据集
-
-将数据集整理为如下结构， 并将数据集置于data目录下。
-
-```
-PPM-100/
-|--train/
-|  |--fg/
-|  |--alpha/
-|
-|--val/
-|  |--fg/
-|  |--alpha
-|
-|--train.txt
-|
-|--val.txt
-```
-其中，fg目录下的图象名称需和alpha目录下的名称一一对应
-
-train.txt和val.txt的内容如下
-```
-train/fg/14299313536_ea3e61076c_o.jpg
-train/fg/14429083354_23c8fddff5_o.jpg
-train/fg/14559969490_d33552a324_o.jpg
-...
-```
-可直接下载整理后的[PPM-100](https://paddleseg.bj.bcebos.com/matting/datasets/PPM-100.zip)数据进行后续教程
-
-
-如果完整图象需由前景和背景进行合成的数据集，类似[Deep Image Matting](https://arxiv.org/pdf/1703.03872.pdf)论文里使用的数据集Composition-1k，则数据集应整理成如下结构：
-```
-Composition-1k/
-|--bg/
-|
-|--train/
-|  |--fg/
-|  |--alpha/
-|
-|--val/
-|  |--fg/
-|  |--alpha/
-|  |--trimap/ (如果存在)
-|
-|--train.txt
-|
-|--val.txt
-```
-train.txt的内容如下：
-```
-train/fg/fg1.jpg bg/bg1.jpg
-train/fg/fg2.jpg bg/bg2.jpg
-train/fg/fg3.jpg bg/bg3.jpg
-...
-```
-
-val.txt的内容如下, 如果不存在对应的trimap，则第三列可不提供，代码将会自动生成。
-```
-val/fg/fg1.jpg bg/bg1.jpg val/trimap/trimap1.jpg
-val/fg/fg2.jpg bg/bg2.jpg val/trimap/trimap2.jpg
-val/fg/fg3.jpg bg/bg3.jpg val/trimap/trimap3.jpg
-...
-```
-
-## 训练评估预测
-### 训练
-```shell
-export CUDA_VISIBLE_DEVICES=0
-python train.py \
-       --config configs/modnet/modnet-mobilenetv2.yml \
-       --do_eval \
-       --use_vdl \
-       --save_interval 5000 \
-       --num_workers 5 \
-       --save_dir output
-```
-
-**note:** 使用--do_eval会影响训练速度及增加显存消耗，根据需求进行开闭。
-
-`--num_workers` 多进程数据读取，加快数据预处理速度
-
-更多参数信息请运行如下命令进行查看:
-```shell
-python train.py --help
-```
-如需使用多卡，请用`python -m paddle.distributed.launch`进行启动
-
-### 评估
-```shell
-export CUDA_VISIBLE_DEVICES=0
-python val.py \
-       --config configs/modnet/modnet-mobilenetv2.yml \
-       --model_path output/best_model/model.pdparams \
-       --save_dir ./output/results \
-       --save_results
-```
-`--save_result` 开启会保留图片的预测结果，可选择关闭以加快评估速度。
-
-你可以直接下载我们提供的模型进行评估。
-
-更多参数信息请运行如下命令进行查看:
-```shell
-python val.py --help
-```
-
-### 预测
-```shell
-export CUDA_VISIBLE_DEVICES=0
-python predict.py \
-    --config configs/modnet/modnet-mobilenetv2.yml \
-    --model_path output/best_model/model.pdparams \
-    --image_path data/PPM-100/val/fg/ \
-    --save_dir ./output/results
-```
-如模型需要trimap信息，需要通过`--trimap_path`传入trimap路径。
-
-你可以直接下载我们提供的模型进行预测。
-
-更多参数信息请运行如下命令进行查看:
-```shell
-python predict.py --help
-```
-
-
-## 背景替换
-```shell
-export CUDA_VISIBLE_DEVICES=0
-python bg_replace.py \
-    --config configs/modnet/modnet-mobilenetv2.yml \
-    --model_path output/best_model/model.pdparams \
-    --image_path path/to/your/image \
-    --background path/to/your/background/image \
-    --save_dir ./output/results
-```
-如模型需要trimap信息，需要通过`--trimap_path`传入trimap路径。
-
-`--background`可以传入背景图片路劲，或选择（'r','g','b','w')中的一种，代表红，绿，蓝，白背景, 若不提供则采用绿色作为背景。
-
-**注意：** `--image_path`必须是一张图片的具体路径。
-
-你可以直接下载我们提供的模型进行背景替换。
-
-更多参数信息请运行如下命令进行查看:
-```shell
-python bg_replace.py --help
-```
-
-## 导出部署
-### 模型导出
-```shell
-python export.py \
-    --config configs/modnet/modnet-mobilenetv2.yml \
-    --model_path output/best_model/model.pdparams \
-    --save_dir output/export
-```
-如果模型（比如：DIM）需要trimap的输入，需要增加参数`--trimap`
-
-更多参数信息请运行如下命令进行查看:
-```shell
-python export.py --help
-```
-
-### 应用部署
-```shell
-python deploy/python/infer.py \
-    --config output/export/deploy.yaml \
-    --image_path data/PPM-100/val/fg/ \
-    --save_dir output/results
-```
-如模型需要trimap信息，需要通过`--trimap_path`传入trimap路径。
-
-更多参数信息请运行如下命令进行查看:
-```shell
-python deploy/python/infer.py --help
-```
-
-## 贡献者
-
-感谢
-[wuyefeilin](https://github.com/wuyefeilin)、
-[钱彬(Qianbin)](https://github.com/qianbin1989228)、
-[yzl19940819](https://github.com/yzl19940819)
-等开发者的贡献

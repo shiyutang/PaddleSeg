@@ -17,9 +17,6 @@ import codecs
 import os
 import sys
 
-LOCAL_PATH = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(LOCAL_PATH, '..', '..'))
-
 import cv2
 import tqdm
 import yaml
@@ -30,8 +27,13 @@ from paddle.inference import Config as PredictConfig
 from paddleseg.cvlibs import manager
 from paddleseg.utils import get_sys_env, logger
 
-from utils import get_image_list, mkdir, estimate_foreground_ml
-import transforms as T
+LOCAL_PATH = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(LOCAL_PATH, '..', '..'))
+manager.BACKBONES._components_dict.clear()
+manager.TRANSFORMS._components_dict.clear()
+
+import ppmatting.transforms as T
+from ppmatting.utils import get_image_list, mkdir, estimate_foreground_ml
 
 
 def parse_args():
@@ -73,6 +75,12 @@ def parse_args():
         choices=['cpu', 'gpu'],
         default="gpu",
         help="Select which device to inference, defaults to gpu.")
+    parser.add_argument(
+        '--fg_estimate',
+        default=True,
+        type=eval,
+        choices=[True, False],
+        help='Whether to estimate foreground when predicting.')
 
     parser.add_argument(
         '--cpu_threads',
@@ -240,6 +248,7 @@ class Predictor:
         if hasattr(args, 'benchmark') and args.benchmark:
             import auto_log
             pid = os.getpid()
+            gpu_id = None if args.device == 'cpu' else 0
             self.autolog = auto_log.AutoLogger(
                 model_name=args.model_name,
                 model_precision=args.precision,
@@ -249,7 +258,7 @@ class Predictor:
                 inference_config=self.pred_cfg,
                 pids=pid,
                 process_name=None,
-                gpu_ids=0,
+                gpu_ids=gpu_id,
                 time_keys=[
                     'preprocess_time', 'inference_time', 'postprocess_time'
                 ],
@@ -390,10 +399,10 @@ class Predictor:
 
             self.predictor.run()
 
+            results = output_handle.copy_to_cpu()
+
             if args.benchmark:
                 self.autolog.times.stamp()
-
-            results = output_handle.copy_to_cpu()
 
             results = results.squeeze(1)
             for j in range(args.batch_size):
@@ -440,23 +449,29 @@ class Predictor:
 
         if self.imgs_dir is not None:
             img_path = img_path.replace(self.imgs_dir, '')
+        else:
+            img_path = os.path.basename(img_path)
         name, ext = os.path.splitext(img_path)
-        if name[0] == '/':
+        if name[0] == '/' or name[0] == '\\':
             name = name[1:]
-        alpha_save_path = os.path.join(args.save_dir, 'alpha/', name + '.png')
-        clip_save_path = os.path.join(args.save_dir, 'clip/', name + '.png')
+
+        alpha_save_path = os.path.join(args.save_dir, name + '_alpha.png')
+        rgba_save_path = os.path.join(args.save_dir, name + '_rgba.png')
 
         # save alpha
         mkdir(alpha_save_path)
         cv2.imwrite(alpha_save_path, alpha)
 
-        # save clip image
-        mkdir(clip_save_path)
-        fg = estimate_foreground_ml(ori_img / 255.0, alpha / 255.0) * 255
+        # save rgba image
+        mkdir(rgba_save_path)
+        if args.fg_estimate:
+            fg = estimate_foreground_ml(ori_img / 255.0, alpha / 255.0) * 255
+        else:
+            fg = ori_img
         fg = fg.astype('uint8')
         alpha = alpha[:, :, np.newaxis]
-        clip = np.concatenate([fg, alpha], axis=-1)
-        cv2.imwrite(clip_save_path, clip)
+        rgba = np.concatenate([fg, alpha], axis=-1)
+        cv2.imwrite(rgba_save_path, rgba)
 
 
 def main(args):
