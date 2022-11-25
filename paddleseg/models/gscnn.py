@@ -141,6 +141,7 @@ class GSCNNHead(nn.Layer):
 
     def forward(self, x, feat_list, s_input):
         input_shape = paddle.shape(x)
+        input_shape_np = x.shape
         m1f = F.interpolate(
             s_input,
             input_shape[2:],
@@ -170,7 +171,8 @@ class GSCNNHead(nn.Layer):
         # Get image gradient
         im_arr = x.numpy().transpose((0, 2, 3, 1))
         im_arr = ((im_arr * 0.5 + 0.5) * 255).astype(np.uint8)
-        canny = np.zeros((input_shape[0], 1, input_shape[2], input_shape[3]))
+        canny = np.zeros(
+            (input_shape_np[0], 1, input_shape_np[2], input_shape_np[3]))
         for i in range(input_shape[0]):
             canny[i] = cv2.Canny(im_arr[i], 10, 100)
         canny = canny / 255
