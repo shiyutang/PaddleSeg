@@ -191,11 +191,11 @@ def _calculate_fan_in_and_fan_out(tensor):
     return fan_in, fan_out
 
 
-def c2_linear_fill(layer):
-    import math
-    kaiming_uniform(
-        layer.weight, negative_slope=math.sqrt(5), nonlinearity='leaky_relu')
-    if layer.bias is not None:
-        fan_in, _ = _calculate_fan_in_and_fan_out(layer.weight)
-        bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
-        uniform_(layer.bias, -bound, bound)
+# def c2_linear_fill(layer):
+#     import math
+#     kaiming_uniform(
+#         layer.weight, negative_slope=math.sqrt(5), nonlinearity='leaky_relu')
+#     if layer.bias is not None:
+#         fan_in, _ = _calculate_fan_in_and_fan_out(layer.weight)
+#         bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
+#         uniform_(layer.bias, -bound, bound)

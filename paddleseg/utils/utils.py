@@ -63,6 +63,7 @@ def download_pretrained_model(pretrained_model):
         with filelock.FileLock(os.path.join(seg_env.TMP_HOME, savename)):
             pretrained_model = download_file_and_uncompress(
                 pretrained_model,
+                cover=True,
                 savepath=_dir,
                 extrapath=seg_env.PRETRAINED_MODEL_HOME,
                 extraname=savename)

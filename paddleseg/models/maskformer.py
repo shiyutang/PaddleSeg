@@ -468,9 +468,9 @@ class TransformerPredictor(nn.Layer):
 
         if self.mask_classification:
             self.class_embed = nn.Linear(hidden_dim, num_classes + 1)
-            param_init.c2_linear_fill(self.class_embed)  # todo: rm it
+            # param_init.c2_linear_fill(self.class_embed)  # todo: rm it
         self.mask_embed = MLP(hidden_dim, hidden_dim, mask_dim, 3)
-        param_init.c2_linear_fill(self.mask_embed)  # todo: rm it
+        # param_init.c2_linear_fill(self.mask_embed)  # todo: rm it
 
     def forward(self, x, mask_features):
         pos = self.pe_layer(x)
