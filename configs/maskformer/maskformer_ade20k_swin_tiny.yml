@@ -51,7 +51,7 @@ model:
   num_classes: 150
   backbone:
     type: SwinTransformer_tiny_patch4_window7_224_maskformer
-  pretrained: saved_model/maskformer_tiny_init_wbackbonea.pdparams #https://github.com/SwinTransformer/storage/releases/download/v1.0.8/swin_tiny_patch4_window7_224_22k.pth
+  pretrained:  https://bj.bcebos.com/paddleseg/dygraph/ade20k/maskformer_ade20k_swin_tiny/pretrained/model.pdparams
 
 optimizer:
   type: AdamW
