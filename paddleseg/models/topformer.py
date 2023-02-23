@@ -50,14 +50,18 @@ class TopFormer(nn.Layer):
                  backbone,
                  head_use_dw=False,
                  align_corners=False,
-                 pretrained=None):
+                 pretrained=None,
+                 upsample='intepolate'):
         super().__init__()
         self.backbone = backbone
+        self.upsample = upsample
+        self.num_classes = num_classes
 
         head_in_channels = [
             i for i in backbone.injection_out_channels if i is not None
         ]
         self.decode_head = TopFormerHead(
+            in_transform='only_one',
             num_classes=num_classes,
             in_channels=head_in_channels,
             use_dw=head_use_dw,
@@ -72,11 +76,43 @@ class TopFormer(nn.Layer):
             utils.load_entire_model(self, self.pretrained)
 
     def forward(self, x):
-        x_hw = paddle.shape(x)[2:]
+        x_hw = x.shape[2:]
         x = self.backbone(x)  # len=3, 1/8,1/16,1/32
         x = self.decode_head(x)
-        x = F.interpolate(
-            x, x_hw, mode='bilinear', align_corners=self.align_corners)
+        import pdb
+        pdb.set_trace()
+        if self.upsample == 'intepolate':
+            x = F.interpolate(
+                x, x_hw, mode='bilinear', align_corners=self.align_corners)
+        elif self.upsample == 'valid':
+            if not self.training:
+                labelset = paddle.unique(paddle.argmax(x, 1))
+                if not labelset.shape[
+                        -1] / self.num_classes < 0.2:  # shape will be -1
+                    x = F.interpolate(
+                        x,
+                        x_hw,
+                        mode='bilinear',
+                        align_corners=self.align_corners)
+                else:
+                    x = paddle.gather(x, labelset, axis=1)
+                    x = F.interpolate(
+                        x,
+                        x_hw,
+                        mode='bilinear',
+                        align_corners=self.align_corners)
+
+                    pred = paddle.argmax(x, 1)
+                    pred_retrieve = paddle.zeros(pred.shape, dtype='int32')
+                    for i, val in enumerate(labelset):
+                        pred_retrieve[pred == i] = labelset[i].cast('int32')
+
+                    return [pred_retrieve]
+            else:
+                x = F.interpolate(
+                    x, x_hw, mode='bilinear', align_corners=self.align_corners)
+        else:
+            raise NotImplementedError(self.upsample, "is not implemented")
 
         return [x]
 
@@ -109,7 +145,9 @@ class TopFormerHead(nn.Layer):
             self.last_channels, num_classes, kernel_size=1)
 
     def _init_inputs(self, in_channels, in_index, in_transform):
-        assert in_transform in [None, 'resize_concat', 'multiple_select']
+        assert in_transform in [
+            None, 'resize_concat', 'multiple_select', 'only_one'
+        ]
         if in_transform is not None:
             assert len(in_channels) == len(in_index)
             if in_transform == 'resize_concat':
@@ -142,6 +180,8 @@ class TopFormerHead(nn.Layer):
                     mode='bilinear',
                     align_corners=self.align_corners)
                 inputs += x
+        elif self.in_transform == 'only_one':
+            pass
         else:
             inputs = inputs[self.in_index]
 
