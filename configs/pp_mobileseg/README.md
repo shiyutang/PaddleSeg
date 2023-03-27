@@ -1,4 +1,4 @@
-# PP-MobileSeg: Exploring Transformer Blocks for Efficient Mobile Segmentation.
+# PP-MobileSeg: Exploring Mobile Segmentation Architecture for Accuracy-Parameter-Latency Balance
 
 ## Contents
 1. Overview
@@ -39,7 +39,7 @@ Extensive experiments show that PP-MobileSeg achieves a superior params-accuracy
 |TopFormer-Tiny|TopTransformer-Tiny|32.46|490.3|1.41|
 |SeaFormer-Tiny|SeaFormer-Tiny|35.00|459.0|1.61|
 |PP-MobileSeg-Tiny|StrideFormer-Tiny|**36.39**|**215.3**|**1.44**|
-|TopFormer-Base|TopTransformer-Base|38.28|480.6|5.13|
+|TopFormer-Base|TopTransformer-Base|38.28**|480.6|5.13|
 |SeaFormer-Base|SeaFormer-Base|40.07**|465.4|8.64|
 |PP-MobileSeg-Base|StrideFormer-Base|**41.57**|**265.5**|**5.62**|
 
