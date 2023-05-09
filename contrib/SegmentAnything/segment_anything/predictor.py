@@ -61,6 +61,7 @@ class SamPredictor:
 
         # Transform the image to the form expected by the model
         input_image = self.transform.apply_image(image)  # numpy array
+        print('######',input_image.shape) #  (512, 1024, 3)
         input_image_paddle = paddle.to_tensor(input_image).cast('int32')
 
         input_image_paddle = input_image_paddle.transpose(
