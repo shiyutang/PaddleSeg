@@ -14,7 +14,7 @@
 
 import os
 import cv2
-import sys 
+import sys
 import yaml
 import codecs
 import argparse
@@ -31,6 +31,7 @@ from paddle.inference import Config as PredictConfig
 from paddleseg.utils import get_image_list, logger
 from paddleseg.utils.visualize import get_pseudo_color_map
 from segment_anything.utils.transforms import ResizeLongestSide
+
 
 class DeployConfig:
     def __init__(self, path):
@@ -108,7 +109,6 @@ def auto_tune(args, imgs, img_nums):
             return
 
     logger.info("Auto tune success.\n")
-
 
 
 class Predictor:
@@ -238,7 +238,8 @@ class Predictor:
             # warm up
             if i == 0 and args.benchmark:
                 for j in range(5):
-                    image, prompt_out = self._preprocess(imgs_path[i:i + args.batch_size][0], prompt)
+                    image, prompt_out = self._preprocess(
+                        imgs_path[i:i + args.batch_size][0], prompt)
                     input_handle1.reshape(image.shape)
                     input_handle1.copy_from_cpu(image)
                     input_handle2.reshape(prompt_out.shape)
@@ -252,7 +253,8 @@ class Predictor:
             if args.benchmark:
                 self.autolog.times.start()
 
-            image, prompt_out = self._preprocess(imgs_path[i:i + args.batch_size][0], prompt)
+            image, prompt_out = self._preprocess(
+                imgs_path[i:i + args.batch_size][0], prompt)
             input_handle1.reshape(image.shape)
             input_handle1.copy_from_cpu(image)
             input_handle2.reshape(prompt_out.shape)
@@ -272,14 +274,16 @@ class Predictor:
             if args.benchmark:
                 self.autolog.times.end(stamp=True)
 
-            self._save_imgs(results, imgs_path[i:i + args.batch_size], args.batch_size)
+            self._save_imgs(results, imgs_path[i:i + args.batch_size],
+                            args.batch_size)
         logger.info("Finish")
 
     def _preprocess(self, image_path, prompts):
         image = cv2.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = self.process.transforms(image)
-        prompt = self.process.preprocess_prompt(prompts['points'], prompts['boxs'])
+        prompt = self.process.preprocess_prompt(prompts['points'],
+                                                prompts['boxs'])
 
         return [image, prompt]
 
@@ -297,42 +301,39 @@ class Predictor:
 
 class Processer:
     def __init__(self):
-        self.image_encoder_size=1024
-        self.pixel_mean: List[float]=[123.675, 116.28, 103.53]
-        self.pixel_std: List[float]=[58.395, 57.12, 57.375]
+        self.image_encoder_size = 1024
+        self.pixel_mean: List[float] = [123.675, 116.28, 103.53]
+        self.pixel_std: List[float] = [58.395, 57.12, 57.375]
         self.transform = ResizeLongestSide(self.image_encoder_size)
         self.mask_threshold = 0.0
 
-    def transforms(self, image, image_format='RGB', ):
-        # Transform the image to the form expected by the model
+    def transforms(
+            self,
+            image,
+            image_format='RGB', ):
         input_image = self.transform.apply_image(image)  # numpy array
-        # input_image_paddle = paddle.to_tensor(input_image).cast('int32')
-        # input_image_paddle = input_image_paddle.transpose(
-        #     [2, 0, 1])[None, :, :, :]
-        # transformed_image = input_image_paddle
-        
-        transformed_image =np.transpose(input_image,(2,0,1))[None,:,:,:]
+
+        transformed_image = np.transpose(input_image, (2, 0, 1))[None, :, :, :]
         original_image_size = image.shape[:2]
-        
 
         def preprocess(x: np.array) -> np.array:
             """Normalize pixel values and pad to a square input."""
             # Normalize colors
-            x = (x - np.array(self.pixel_mean)[None, :, None, None]) / np.array(self.pixel_std)[None, :, None, None]
+            x = (x - np.array(self.pixel_mean)[None, :, None, None]
+                 ) / np.array(self.pixel_std)[None, :, None, None]
 
             # Pad
             h, w = x.shape[-2:]
             padh = self.image_encoder_size - h
             padw = self.image_encoder_size - w
-            x = np.pad(x, ((0,0), (0,0), (0, padh), (0, padw)))
-            
+            x = np.pad(x, ((0, 0), (0, 0), (0, padh), (0, padw)))
+
             return x
 
         assert (
             len(transformed_image.shape) == 4 and
             transformed_image.shape[1] == 3 and
-            max(*transformed_image.shape[2:]) ==
-            self.image_encoder_size
+            max(*transformed_image.shape[2:]) == self.image_encoder_size
         ), f"set_paddle_image input must be BCHW with long side {self.image_encoder_size}."
 
         self.original_size = original_image_size
@@ -345,10 +346,10 @@ class Processer:
         # Transform input prompts
         if point_coords is not None:
             point_coords = self.transform.apply_coords(point_coords,
-                                                    self.original_size)
+                                                       self.original_size)
             # coords_paddle = paddle.to_tensor(point_coords).cast('float32')
             coords_paddle = point_coords[None, :, :].astype('float32')
-            
+
             return coords_paddle
 
         if box is not None:
@@ -356,21 +357,21 @@ class Processer:
             # box_paddle = paddle.to_tensor(box).cast('float32')
             box_paddle = box[None, :].astype('float32')
             return box_paddle
-    
+
     def postprocess(self, low_res_masks):
         # Upscale the masks to the original image resolution
         masks = self.postprocess_masks(low_res_masks, self.input_size,
-                                             self.original_size)
+                                       self.original_size)
         masks = masks > self.mask_threshold
-        masks = masks.detach().cpu().numpy() # filter out the first element
+        masks = masks.detach().cpu().numpy()  # filter out the first element
 
         return masks
-    
+
     def postprocess_masks(
-        self,
-        masks: paddle.Tensor,
-        input_size: Tuple[int, ...],
-        original_size: Tuple[int, ...], ) -> paddle.Tensor:
+            self,
+            masks: paddle.Tensor,
+            input_size: Tuple[int, ...],
+            original_size: Tuple[int, ...], ) -> paddle.Tensor:
         """
         Remove padding and upscale masks to the original image size.
 
@@ -396,6 +397,7 @@ class Processer:
         masks = F.interpolate(
             masks, original_size, mode="bilinear", align_corners=False)
         return masks
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Test')
@@ -526,7 +528,10 @@ def main(args):
 
     # create and run predictor
     predictor = Predictor(args)
-    predictor.run(imgs_list, {'input_type': input_type, 'points': point, 'boxs':box})
+    predictor.run(imgs_list,
+                  {'input_type': input_type,
+                   'points': point,
+                   'boxs': box})
 
     if use_auto_tune(args) and \
         os.path.exists(args.auto_tuned_shape_file):

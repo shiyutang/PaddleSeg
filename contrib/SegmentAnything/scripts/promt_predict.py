@@ -97,28 +97,27 @@ def main(args):
 
     image = cv2.imread(input_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-   
-    from segment_anything.modeling.sam_models import SamVitB
-    model = SamVitB(checkpoint='https://bj.bcebos.com/paddleseg/dygraph/paddlesegAnything/vit_b/model.pdparams',
-                    input_type='points')
-    t_image = model.transforms(image)
-    prompt = model.preprocess_prompt(point, input_label, box)
-    masks = model(t_image, prompt)
-    masks = model.postprocess(masks)
-    import pdb; pdb.set_trace()
-    masks = masks[0].detach().cpu().numpy()
 
-    # model = sam_model_registry[args.model_type](
-    #     checkpoint=model_link[args.model_type])
-    # predictor = SamPredictor(model)
-    # predictor.set_image(image)
+    # from segment_anything.modeling.sam_models import SamVitB
+    # model = SamVitB(checkpoint='https://bj.bcebos.com/paddleseg/dygraph/paddlesegAnything/vit_b/model.pdparams',
+    #                 input_type='points')
+    # t_image = model.transforms(image)
+    # prompt = model.preprocess_prompt(point, input_label, box)
+    # masks = model(t_image, prompt)
+    # masks = model.postprocess(masks)
+    # masks = masks[0].detach().cpu().numpy()
 
-    # masks, _, _ = predictor.predict(
-    #     point_coords=point,  # array([[1200,  450]])
-    #     point_labels=input_label, # array([1])
-    #     box=box, # np.array([[box[0], box[1]], [box[2], box[3]]])
-    #     multimask_output=True, )
-    print('image.shape, masks.shape', image.shape, masks.shape) # (1024, 2048, 3) (3, 1024, 2048) # each channel is a result
+    model = sam_model_registry[args.model_type](
+        checkpoint=model_link[args.model_type])
+    predictor = SamPredictor(model)
+    predictor.set_image(image)
+
+    masks, _, _ = predictor.predict(
+        point_coords=point,  # array([[1200,  450]])
+        point_labels=input_label,  # array([1])
+        box=box,  # np.array([[box[0], box[1]], [box[2], box[3]]])
+        multimask_output=True, )
+    # print('image.shape, masks.shape', image.shape, masks.shape) # (1024, 2048, 3) (3, 1024, 2048) # each channel is a result
 
     plt.figure(figsize=(10, 10))
     plt.imshow(image)

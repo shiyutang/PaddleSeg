@@ -31,12 +31,14 @@ class SAM(nn.Layer):
     image_format: str = "RGB"
 
     def __init__(self,
-                encoder_embed_dim,
-                encoder_depth,
-                encoder_num_heads,
-                encoder_global_attn_indexes, checkpoint=None, input_type=None,
-                pixel_mean: List[float]=[123.675, 116.28, 103.53],
-                pixel_std: List[float]=[58.395, 57.12, 57.375]) -> None:
+                 encoder_embed_dim,
+                 encoder_depth,
+                 encoder_num_heads,
+                 encoder_global_attn_indexes,
+                 checkpoint=None,
+                 input_type=None,
+                 pixel_mean: List[float]=[123.675, 116.28, 103.53],
+                 pixel_std: List[float]=[58.395, 57.12, 57.375]) -> None:
         """
         SAM predicts object masks from an image and input prompts.
 
@@ -57,36 +59,36 @@ class SAM(nn.Layer):
         assert input_type != None, "input_type is None, but it is required."
         self.input_type = input_type
         self.set_image = False
-        
+
         self.image_encoder = ImageEncoderViT(
-                            depth=encoder_depth,
-                            embed_dim=encoder_embed_dim,
-                            img_size=image_size,
-                            mlp_ratio=4,
-                            norm_layer=partial(
-                                paddle.nn.LayerNorm, epsilon=1e-6),
-                            num_heads=encoder_num_heads,
-                            patch_size=vit_patch_size,
-                            qkv_bias=True,
-                            use_rel_pos=True,
-                            global_attn_indexes=encoder_global_attn_indexes,
-                            window_size=14,
-                            out_chans=prompt_embed_dim, )
+            depth=encoder_depth,
+            embed_dim=encoder_embed_dim,
+            img_size=image_size,
+            mlp_ratio=4,
+            norm_layer=partial(
+                paddle.nn.LayerNorm, epsilon=1e-6),
+            num_heads=encoder_num_heads,
+            patch_size=vit_patch_size,
+            qkv_bias=True,
+            use_rel_pos=True,
+            global_attn_indexes=encoder_global_attn_indexes,
+            window_size=14,
+            out_chans=prompt_embed_dim, )
         self.prompt_encoder = PromptEncoder(
-                            embed_dim=prompt_embed_dim,
-                            image_embedding_size=(image_embedding_size, image_embedding_size),
-                            input_image_size=(image_size, image_size),
-                            mask_in_chans=16, )
+            embed_dim=prompt_embed_dim,
+            image_embedding_size=(image_embedding_size, image_embedding_size),
+            input_image_size=(image_size, image_size),
+            mask_in_chans=16, )
         self.mask_decoder = MaskDecoder(
-                            num_multimask_outputs=3,
-                            transformer=TwoWayTransformer(
-                                depth=2,
-                                embedding_dim=prompt_embed_dim,
-                                mlp_dim=2048,
-                                num_heads=8, ),
-                            transformer_dim=prompt_embed_dim,
-                            iou_head_depth=3,
-                            iou_head_hidden_dim=256, )
+            num_multimask_outputs=3,
+            transformer=TwoWayTransformer(
+                depth=2,
+                embedding_dim=prompt_embed_dim,
+                mlp_dim=2048,
+                num_heads=8, ),
+            transformer_dim=prompt_embed_dim,
+            iou_head_depth=3,
+            iou_head_hidden_dim=256, )
         self.eval()
         if checkpoint is not None:
             load_entire_model(self, checkpoint)
@@ -105,8 +107,11 @@ class SAM(nn.Layer):
             return 'gpu'
         else:
             return 'cpu'
-    
-    def transforms(self, image, image_format='RGB', ):
+
+    def transforms(
+            self,
+            image,
+            image_format='RGB', ):
         self.transform = ResizeLongestSide(self.image_encoder.img_size)
 
         assert image_format in [
@@ -122,10 +127,9 @@ class SAM(nn.Layer):
 
         input_image_paddle = input_image_paddle.transpose(
             [2, 0, 1])[None, :, :, :]
-        
+
         transformed_image = input_image_paddle
         original_image_size = image.shape[:2]
-        
 
         def preprocess(x: paddle.Tensor) -> paddle.Tensor:
             """Normalize pixel values and pad to a square input."""
@@ -142,8 +146,7 @@ class SAM(nn.Layer):
         assert (
             len(transformed_image.shape) == 4 and
             transformed_image.shape[1] == 3 and
-            max(*transformed_image.shape[2:]) ==
-            self.image_encoder.img_size
+            max(*transformed_image.shape[2:]) == self.image_encoder.img_size
         ), f"set_paddle_image input must be BCHW with long side {self.image_encoder.img_size}."
 
         self.original_size = original_image_size
@@ -163,7 +166,7 @@ class SAM(nn.Layer):
                                                        self.original_size)
             coords_paddle = paddle.to_tensor(point_coords).cast('float32')
             coords_paddle = coords_paddle[None, :, :]
-            
+
             return coords_paddle
 
         if box is not None:
@@ -171,17 +174,17 @@ class SAM(nn.Layer):
             box_paddle = paddle.to_tensor(box).cast('float32')
             box_paddle = box_paddle[None, :]
             return box_paddle
-        
+
     def after_forward(self):
         masks = masks[0].detach().cpu().numpy()
         iou_predictions = iou_predictions[0].detach().cpu().numpy()
         low_res_masks = low_res_masks[0].detach().cpu().numpy()
 
     def postprocess_masks(
-        self,
-        masks: paddle.Tensor,
-        input_size: Tuple[int, ...],
-        original_size: Tuple[int, ...], ) -> paddle.Tensor:
+            self,
+            masks: paddle.Tensor,
+            input_size: Tuple[int, ...],
+            original_size: Tuple[int, ...], ) -> paddle.Tensor:
         """
         Remove padding and upscale masks to the original image size.
 
@@ -210,7 +213,7 @@ class SAM(nn.Layer):
     def postprocess(self, low_res_masks):
         # Upscale the masks to the original image resolution
         masks = self.postprocess_masks(low_res_masks, self.input_size,
-                                             self.original_size)
+                                       self.original_size)
         masks = masks > self.mask_threshold
 
         return masks
@@ -221,17 +224,17 @@ class SAM(nn.Layer):
         labels_paddle = labels_paddle[None, :]
         points = (coords_paddle, labels_paddle)
         if self.set_image == False:
-            self.features = self.image_encoder(x) # [1, 3, 1024, 1024]
+            self.features = self.image_encoder(x)  # [1, 3, 1024, 1024]
             # print("image_encoder shape", self.features.shape) # [1, 256, 64, 64]
             self.set_image = True
-        
+
         # Embed prompts
 
         sparse_embeddings, dense_embeddings = self.prompt_encoder(
             points=points,
             boxes=None,
             masks=None, )
-        
+
         # Predict masks
         low_res_masks, iou_predictions = self.mask_decoder(
             image_embeddings=self.features,
@@ -240,20 +243,19 @@ class SAM(nn.Layer):
             dense_prompt_embeddings=dense_embeddings,
             multimask_output=True, )
 
-        return low_res_masks #, iou_predictions, low_res_masks
+        return low_res_masks  #, iou_predictions, low_res_masks
 
     def prompt_forward_box(self, x, box_paddle):
-
         if self.set_image == False:
             self.features = self.image_encoder(x)
-            self.set_image = True     
-             
+            self.set_image = True
+
         # Embed prompts
         sparse_embeddings, dense_embeddings = self.prompt_encoder(
             points=None,
             boxes=box_paddle,
             masks=None, )
-        
+
         # Predict masks
         low_res_masks, iou_predictions = self.mask_decoder(
             image_embeddings=self.features,
@@ -262,21 +264,24 @@ class SAM(nn.Layer):
             dense_prompt_embeddings=dense_embeddings,
             multimask_output=True)
 
-        return low_res_masks #, iou_predictions, low_res_masks   
+        return low_res_masks  #, iou_predictions, low_res_masks   
 
-    def full_mask_forward(self, img: List[Dict[str, Any]], coords_paddle) :
-        labels_paddle = np.array([1])
+    def full_mask_forward(self, img: List[Dict[str, Any]], coords_paddle):
+        labels_paddle = paddle.ones(
+            shape=[coords_paddle.shape[0], ], dtype='int64')
+        labels_paddle = paddle.to_tensor(labels_paddle).cast('int32')[:, None]
+        # print('labels_paddle.shape', labels_paddle.shape) # [64, 1]
         points = (coords_paddle, labels_paddle)
         if self.set_image == False:
             self.features = self.image_encoder(img)
             self.set_image = True
-        
+
         # Embed prompts
         sparse_embeddings, dense_embeddings = self.prompt_encoder(
             points=points,
             boxes=None,
             masks=None, )
-        
+
         # Predict masks
         low_res_masks, iou_predictions = self.mask_decoder(
             image_embeddings=self.features,
@@ -285,52 +290,55 @@ class SAM(nn.Layer):
             dense_prompt_embeddings=dense_embeddings,
             multimask_output=True, )
 
-        return low_res_masks, iou_predictions # low_res_masks,
+        return low_res_masks, iou_predictions  # (64, 3) # low_res_masks,
 
     def forward(self, img, prompt):
-        if self.input_type=='points':
+        if self.input_type == 'points':
             masks = self.prompt_forward_point(img, prompt)
-        elif self.input_type=='boxs':
+        elif self.input_type == 'boxs':
             masks = self.prompt_forward_box(img, prompt)
-        elif self.input_type=='points_grid':
-            masks, iou_predictions  = self.full_mask_forward(img, prompt)
+        elif self.input_type == 'points_grid':
+            masks, iou_predictions = self.full_mask_forward(img, prompt)
+            return masks, iou_predictions
         else:
-            NotImplementedError('input_type need to be in {"points", "boxs", "points_grid"}, but got: {}'.format(self.input_type))
+            NotImplementedError(
+                'input_type need to be in {"points", "boxs", "points_grid"}, but got: {}'.
+                format(self.input_type))
 
         return masks
 
+
 class SamVitH(SAM):
-    def __init__(self, encoder_embed_dim=1280,
-                encoder_depth=32,
-                encoder_num_heads=16,
-                encoder_global_attn_indexes=[7, 15, 23, 31],
-                checkpoint=None,
-                input_type=None):
-        super().__init__(encoder_embed_dim,
-                        encoder_depth,
-                        encoder_num_heads,
-                        encoder_global_attn_indexes,checkpoint, input_type)
+    def __init__(self,
+                 encoder_embed_dim=1280,
+                 encoder_depth=32,
+                 encoder_num_heads=16,
+                 encoder_global_attn_indexes=[7, 15, 23, 31],
+                 checkpoint=None,
+                 input_type=None):
+        super().__init__(encoder_embed_dim, encoder_depth, encoder_num_heads,
+                         encoder_global_attn_indexes, checkpoint, input_type)
 
 
 class SamVitL(SAM):
-    def __init__(self, encoder_embed_dim=1024,
-                encoder_depth=24,
-                encoder_num_heads=16,
-                encoder_global_attn_indexes=[5, 11, 17, 23],
-                checkpoint=None, input_type=None):
-        super().__init__(encoder_embed_dim,
-                        encoder_depth,
-                        encoder_num_heads,
-                        encoder_global_attn_indexes,checkpoint, input_type)
+    def __init__(self,
+                 encoder_embed_dim=1024,
+                 encoder_depth=24,
+                 encoder_num_heads=16,
+                 encoder_global_attn_indexes=[5, 11, 17, 23],
+                 checkpoint=None,
+                 input_type=None):
+        super().__init__(encoder_embed_dim, encoder_depth, encoder_num_heads,
+                         encoder_global_attn_indexes, checkpoint, input_type)
 
 
 class SamVitB(SAM):
-    def __init__(self, encoder_embed_dim=768,
-                encoder_depth=12,
-                encoder_num_heads=12,
-                encoder_global_attn_indexes=[2, 5, 8, 11],
-                checkpoint=None, input_type=None):
-        super().__init__(encoder_embed_dim,
-                        encoder_depth,
-                        encoder_num_heads,
-                        encoder_global_attn_indexes,checkpoint, input_type)
+    def __init__(self,
+                 encoder_embed_dim=768,
+                 encoder_depth=12,
+                 encoder_num_heads=12,
+                 encoder_global_attn_indexes=[2, 5, 8, 11],
+                 checkpoint=None,
+                 input_type=None):
+        super().__init__(encoder_embed_dim, encoder_depth, encoder_num_heads,
+                         encoder_global_attn_indexes, checkpoint, input_type)

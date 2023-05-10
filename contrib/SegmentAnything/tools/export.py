@@ -33,14 +33,21 @@ model_link = {
     "https://bj.bcebos.com/paddleseg/dygraph/paddlesegAnything/vit_b/model.pdparams"
 }
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Export Inference Model.')
-    parser.add_argument("--model_type", 
-        choices=['SamVitL', 'SamVitB', 'SamVitLH'], required=True,
-        help="The model type.", type=str)
-    parser.add_argument("--input_type", 
-        choices=['boxs', 'points', 'points_grid'], required=True,
-        help="The model type.", type=str)
+    parser.add_argument(
+        "--model_type",
+        choices=['SamVitL', 'SamVitB', 'SamVitLH'],
+        required=True,
+        help="The model type.",
+        type=str)
+    parser.add_argument(
+        "--input_type",
+        choices=['boxs', 'points', 'points_grid'],
+        required=True,
+        help="The model type.",
+        type=str)
     parser.add_argument(
         '--save_dir',
         help='The directory for saving the exported inference model',
@@ -61,7 +68,8 @@ def main(args):
     os.environ['PADDLESEG_EXPORT_STAGE'] = 'True'
 
     # save model
-    model = eval(args.model_type)(checkpoint=model_link[args.model_type], input_type=args.input_type)
+    model = eval(args.model_type)(checkpoint=model_link[args.model_type],
+                                  input_type=args.input_type)
 
     shape = [None, 3, None, None] if args.input_img_shape is None \
         else args.input_img_shape
@@ -70,10 +78,14 @@ def main(args):
     elif args.input_type == 'boxs':
         shape2 = [1, 1, 4]
     elif args.input_type == 'points_grid':
-        pass
-        # todo shape2 = [None, None, 3]
-    
-    input_spec = [paddle.static.InputSpec(shape=shape, dtype='float32'), paddle.static.InputSpec(shape=shape2, dtype='int32'),]
+        shape2 = [64, 1, 2]
+
+    input_spec = [
+        paddle.static.InputSpec(
+            shape=shape, dtype='float32'),
+        paddle.static.InputSpec(
+            shape=shape2, dtype='int32'),
+    ]
     model.eval()
     model = paddle.jit.to_static(model, input_spec=input_spec)
     paddle.jit.save(model, os.path.join(args.save_dir, 'model'))
@@ -86,7 +98,7 @@ def main(args):
             'input_img_shape': shape,
             'input_prompt_shape': shape2,
             'input_prompt_type': args.input_type,
-            'output_dtype':  'float32'
+            'output_dtype': 'float32'
         }
     }
     msg = '\n---------------Deploy Information---------------\n'

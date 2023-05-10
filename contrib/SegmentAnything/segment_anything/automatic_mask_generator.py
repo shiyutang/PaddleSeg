@@ -259,6 +259,9 @@ class SamAutomaticMaskGenerator:
             crop_box: List[int],
             crop_layer_idx: int,
             orig_size: Tuple[int, ...], ) -> MaskData:
+        """
+        There will be multiple forward for each cropped image here.
+        """
         # Crop the image and calculate embeddings
         x0, y0, x1, y1 = crop_box
         cropped_im = image[y0:y1, x0:x1, :]
@@ -274,7 +277,7 @@ class SamAutomaticMaskGenerator:
         for (points, ) in batch_iterator(self.points_per_batch,
                                          points_for_image):
             batch_data = self._process_batch(points, cropped_im_size, crop_box,
-                                             orig_size)
+                                             orig_size)  # forward
             data.cat(batch_data)
             del batch_data
         self.predictor.reset_image()
@@ -307,7 +310,9 @@ class SamAutomaticMaskGenerator:
                                                                    im_size)
         in_points = paddle.to_tensor(transformed_points)
         in_labels = paddle.ones(shape=[in_points.shape[0], ], dtype='int64')
-        masks, iou_preds, _ = self.predictor.predict_paddle(
+        import pdb
+        pdb.set_trace()
+        masks, iou_preds, _ = self.predictor.predict_paddle(  # forward
             in_points[:, None, :],
             in_labels[:, None],
             multimask_output=True,

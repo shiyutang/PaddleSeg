@@ -264,6 +264,9 @@ def gradio_display(generator):
             inputs=None,
             outputs=[image_in, img_out1, img_out2, downloaded_img])
 
+        # image = cv2.imread(input_path)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
         image_submit_btn.click(
             fn=get_id_photo_output,
             inputs=[image_in, ],
@@ -298,7 +301,12 @@ def main(args: argparse.Namespace) -> None:
     generator = SamAutomaticMaskGenerator(
         sam, output_mode=output_mode, **amg_kwargs)
 
-    gradio_display(generator)
+    image = cv2.imread("scripts/cityscapes_demo.png")
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    generator.generate(image)
+
+    # gradio_display(generator)
 
 
 if __name__ == "__main__":
