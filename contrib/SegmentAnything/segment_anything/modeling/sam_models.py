@@ -210,7 +210,11 @@ class SAM(nn.Layer):
             masks, original_size, mode="bilinear", align_corners=False)
         return masks
 
-    def postprocess(self, low_res_masks):
+    def postprocess(self, low_res_masks, input_size, original_size):
+        if input_size is not None:
+            self.input_size = input_size
+        if original_size is not None:
+            self.original_size = original_size
         # Upscale the masks to the original image resolution
         masks = self.postprocess_masks(low_res_masks, self.input_size,
                                        self.original_size)
@@ -223,17 +227,22 @@ class SAM(nn.Layer):
         labels_paddle = paddle.to_tensor(labels_paddle).cast('int32')
         labels_paddle = labels_paddle[None, :]
         points = (coords_paddle, labels_paddle)
+        import time
+        a = time.time()
         if self.set_image == False:
             self.features = self.image_encoder(x)  # [1, 3, 1024, 1024]
             # print("image_encoder shape", self.features.shape) # [1, 256, 64, 64]
             self.set_image = True
+            print('!!!! calculate the image features.')
 
         # Embed prompts
+        b = time.time()
 
         sparse_embeddings, dense_embeddings = self.prompt_encoder(
             points=points,
             boxes=None,
             masks=None, )
+        c = time.time()
 
         # Predict masks
         low_res_masks, iou_predictions = self.mask_decoder(
@@ -243,7 +252,7 @@ class SAM(nn.Layer):
             dense_prompt_embeddings=dense_embeddings,
             multimask_output=True, )
 
-        return low_res_masks  #, iou_predictions, low_res_masks
+        return low_res_masks, (a, b, c)
 
     def prompt_forward_box(self, x, box_paddle):
         if self.set_image == False:

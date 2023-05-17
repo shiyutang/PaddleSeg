@@ -25,7 +25,7 @@ from paddleseg.deploy.export import WrappedModel
 from segment_anything.modeling.sam_models import SamVitB, SamVitH, SamVitL
 
 model_link = {
-    'SamVitLH':
+    'SamVitH':
     "https://bj.bcebos.com/paddleseg/dygraph/paddlesegAnything/vit_h/model.pdparams",
     'SamVitL':
     "https://bj.bcebos.com/paddleseg/dygraph/paddlesegAnything/vit_l/model.pdparams",
@@ -38,7 +38,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Export Inference Model.')
     parser.add_argument(
         "--model_type",
-        choices=['SamVitL', 'SamVitB', 'SamVitLH'],
+        choices=['SamVitL', 'SamVitB', 'SamVitH'],
         required=True,
         help="The model type.",
         type=str)
@@ -88,7 +88,8 @@ def main(args):
     ]
     model.eval()
     model = paddle.jit.to_static(model, input_spec=input_spec)
-    paddle.jit.save(model, os.path.join(args.save_dir, 'model'))
+    save_path = args.save_dir + f'_{args.model_type}_{args.input_type}'
+    paddle.jit.save(model, os.path.join(save_path, 'model'))
 
     # TODO add test config
     deploy_info = {
@@ -98,6 +99,7 @@ def main(args):
             'input_img_shape': shape,
             'input_prompt_shape': shape2,
             'input_prompt_type': args.input_type,
+            'model_type': args.model_type,
             'output_dtype': 'float32'
         }
     }
@@ -105,11 +107,11 @@ def main(args):
     msg += str(yaml.dump(deploy_info))
     logger.info(msg)
 
-    yml_file = os.path.join(args.save_dir, 'deploy.yaml')
+    yml_file = os.path.join(save_path, 'deploy.yaml')
     with open(yml_file, 'w') as file:
         yaml.dump(deploy_info, file)
 
-    logger.info(f'The inference model is saved in {args.save_dir}')
+    logger.info(f'The inference model is saved in {save_path}')
 
 
 if __name__ == '__main__':

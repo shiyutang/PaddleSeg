@@ -16,6 +16,7 @@ import os
 import cv2
 import sys
 import yaml
+import time
 import codecs
 import argparse
 import numpy as np
@@ -248,10 +249,14 @@ class Predictor:
                     self.predictor.run()
                     results = output_handle.copy_to_cpu()
                     results = self._postprocess(results)
+                else:
+                    print('!! Finish warmup !!')
 
             # inference
             if args.benchmark:
                 self.autolog.times.start()
+
+            start = time.time()
 
             image, prompt_out = self._preprocess(
                 imgs_path[i:i + args.batch_size][0], prompt)
@@ -259,6 +264,8 @@ class Predictor:
             input_handle1.copy_from_cpu(image)
             input_handle2.reshape(prompt_out.shape)
             input_handle2.copy_from_cpu(prompt_out)
+
+            stamp_preprocess = time.time()
 
             if args.benchmark:
                 self.autolog.times.stamp()
@@ -268,8 +275,15 @@ class Predictor:
             results = output_handle.copy_to_cpu()
             if args.benchmark:
                 self.autolog.times.stamp()
+            stamp_model = time.time()
 
             results = self._postprocess(results)
+            end = time.time()
+
+            print('#### %s inference time %s ####' % (i + 1, str(end - start)))
+            print('#### preprocess: {} s, model {} s, post {} s '.format(
+                stamp_preprocess - start, stamp_model - stamp_preprocess, end -
+                stamp_model))
 
             if args.benchmark:
                 self.autolog.times.end(stamp=True)

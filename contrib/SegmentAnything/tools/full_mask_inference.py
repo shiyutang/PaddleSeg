@@ -16,6 +16,7 @@ import os
 import cv2
 import sys
 import yaml
+import time
 import codecs
 import argparse
 import numpy as np
@@ -277,21 +278,83 @@ class Predictor:
 
     def run(self, image_path):
 
-        # if args.benchmark:
-        #     for j in range(5):
-        #         mask_data = self.run_image(image_path)
-        #         results = self._whole_image_postprocess(mask_data)
+        if args.benchmark:
+            for j in range(5):
+                mask_data = self.run_image_no_stamp(image_path)
+                results = self._whole_image_postprocess(mask_data)
 
         if args.benchmark:
             self.autolog.times.start()
+
+        start = time.time()
         mask_data = self.run_image(image_path)
         results = self._whole_image_postprocess(mask_data)
+        end = time.time()
+
         if args.benchmark:
             self.autolog.times.end(stamp=True)
+
+        print('####inference time: %f s' % (end - start))
 
         self._save_imgs(results, image_path[0:0 + args.batch_size],
                         args.batch_size)
         logger.info("Finish")
+
+    def run_image_no_stamp(self, image_path):
+        image = cv2.imread(image_path[0])
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        self.point_grids = build_all_layer_point_grids(
+            self.points_per_side,
+            self.crop_n_layers,
+            self.crop_n_points_downscale_factor, )
+
+        def box_area(boxes):
+            """
+            Computes the area of a set of bounding boxes, which are specified by their
+            (x1, y1, x2, y2) coordinates.
+
+            Args:
+                boxes (Tensor[N, 4]): boxes for which the area will be computed. They
+                    are expected to be in (x1, y1, x2, y2) format with
+                    ``0 <= x1 < x2`` and ``0 <= y1 < y2``.
+
+            Returns:
+                Tensor[N]: the area for each box
+            """
+            if "float" in boxes.dtype:
+                boxes = boxes.cast('float64')
+            elif "int" in boxes.dtype:
+                boxes = boxes.cast('int64')
+
+            boxes = boxes
+            return (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+
+        orig_size = image.shape[:2]
+        crop_boxes, layer_idxs = generate_crop_boxes(
+            orig_size, self.crop_n_layers, self.crop_overlap_ratio)
+
+        data = MaskData()
+
+        for crop_box, layer_idx in zip(crop_boxes, layer_idxs):
+            crop_data = self._process_crop(image, crop_box, layer_idx,
+                                           orig_size)
+            data.cat(crop_data)
+
+        # Remove duplicate masks between crops
+        if len(crop_boxes) > 1:
+            # Prefer masks from smaller crops
+            scores = 1 / box_area(data["crop_boxes"])
+            scores = scores.to(data["boxes"].device)
+            keep_by_nms = nms(
+                data["boxes"].cast('float32'),
+                scores=scores,
+                category_idxs=paddle.zeros(len(data["boxes"])),
+                iou_threshold=self.crop_nms_thresh, )
+            data.filter(keep_by_nms)
+
+        data.to_numpy()
+        return data
 
     def run_image(self, image_path):
         image = cv2.imread(image_path[0])
@@ -301,8 +364,6 @@ class Predictor:
             self.points_per_side,
             self.crop_n_layers,
             self.crop_n_points_downscale_factor, )
-        import pdb
-        pdb.set_trace()
 
         def box_area(boxes):
             """
